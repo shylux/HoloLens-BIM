@@ -1,6 +1,9 @@
 ﻿using System;
 using System.Collections;
 using System.Collections.Generic;
+#if UNITY_EDITOR
+using UnityEditor;
+#endif
 using UnityEngine;
 using UnityEngine.Rendering;
 using UnityEngine.VR.WSA;
@@ -50,14 +53,17 @@ public class ScanManager : MonoBehaviour {
     bool isBaking = false;
 
     // Rendering
+    [Header("Rendering")]
     public bool renderMeshes = false;
-    public Material meshMaterial;
-    public float cooldownPeriod = 2f;
+    private Material meshMaterial;
+    public float cooldownPeriod = 1f;
     public Color startColor = Color.red;
-    public Color endColor = Color.black;
+    public Color endColor = Color.white;
 
     // Use this for initialization
     void Start() {
+        meshMaterial = Resources.Load("Wireframe") as Material;
+
         observer = new SurfaceObserver();
         // define a huge scan area to get every update
         observer.SetVolumeAsAxisAlignedBox(Vector3.zero, new Vector3(10000, 10000, 10000));
@@ -106,7 +112,7 @@ public class ScanManager : MonoBehaviour {
     void onSurfaceChanged(SurfaceId id, SurfaceChange changeType, Bounds bounds, DateTime updateTime) {
         if (changeType == SurfaceChange.Added) {
             SurfaceEntry newEntry = new SurfaceEntry(id.handle, renderMeshes, meshMaterial);
-            newEntry.gameObject.transform.parent = transform;
+            newEntry.gameObject.transform.parent = gameObject.transform;
 
             surfaces.Add(id.handle, newEntry);
         }

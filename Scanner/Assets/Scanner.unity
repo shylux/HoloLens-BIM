@@ -225,6 +225,8 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   updateFrequencyInSeconds: 2
+  renderMeshes: 1
+  meshMaterial: {fileID: 2100000, guid: d698790d3facd3d4289a13fa1243030a, type: 2}
 --- !u!4 &1270605863
 Transform:
   m_ObjectHideFlags: 0

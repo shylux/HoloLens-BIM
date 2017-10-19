@@ -14,7 +14,7 @@ public class SpatialUnderstandingController : MonoBehaviour {
 	
 	// Update is called once per frame
 	void Update () {
-		if (Time.realtimeSinceStartup > 10f) {
+		if (Time.realtimeSinceStartup > 30f) {
             SpatialUnderstanding.Instance.RequestFinishScan();
         }
 	}

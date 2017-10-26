@@ -19,9 +19,11 @@ public class RoomBox : MonoBehaviour {
 
     private List<PlaneFinding.MeshData> meshData = new List<PlaneFinding.MeshData>();
     private bool planeFindingInProgress = false;
+    private float lastPlaneFindingFinishTime;
     private bool previousPlaneFindInProgress = false;
 
     void Start () {
+        lastPlaneFindingFinishTime = Time.realtimeSinceStartup;
         scanManager = scanManagerObject.GetComponent<ScanManager>() as ScanManager;
         scanManager.OnMeshUpdate += OnMeshUpdate;
 	}
@@ -29,18 +31,27 @@ public class RoomBox : MonoBehaviour {
 	void Update () {
         // triggers when the worker finished
         if (previousPlaneFindInProgress && !planeFindingInProgress) {
+            lastPlaneFindingFinishTime = Time.realtimeSinceStartup;
             OnPlanesFound();
         }
         previousPlaneFindInProgress = planeFindingInProgress;
 
         // start plane finding worker
-		if (!planeFindingInProgress && scanManager.numberOfBakedSurfaces >= minSurfacesRequired) {
+		if (scanManager.numberOfBakedSurfaces >= minSurfacesRequired &&
+            !planeFindingInProgress &&
+            Time.realtimeSinceStartup >= lastPlaneFindingFinishTime + 1.0f) { // wait 1 sec to not clog up
+                                                                              // Copy / Convert mesh data
 
-            // Copy / Convert mesh data
+            Debug.Log("Copy surfaces.");
             meshData.Clear();
             foreach (SurfaceEntry surface in scanManager.surfaces.Values) {
-                meshData.Add(new PlaneFinding.MeshData(surface.gameObject.GetComponent<MeshFilter>()));
+                MeshFilter mf = surface.gameObject.GetComponent<MeshFilter>();
+                if (!mf || !mf.sharedMesh || mf.sharedMesh.triangles.Length == 0)
+                    continue; // not sure why those value are null
+                meshData.Add(new PlaneFinding.MeshData(mf));
             }
+
+            Debug.Log("Done copy surfaces.");
 
             planeFindingInProgress = true;
             ThreadPool.QueueUserWorkItem(FindPlanes);
@@ -50,6 +61,7 @@ public class RoomBox : MonoBehaviour {
 
     private void FindPlanes(object state) {
         newPlanes = PlaneFinding.FindSubPlanes(meshData, 0.0f);
+        Debug.Log("Added " + newPlanes.Length + " planes.");
         planeFindingInProgress = false;
     }
 
@@ -59,6 +71,7 @@ public class RoomBox : MonoBehaviour {
 
     void OnPlanesFound() {
         planes.AddRange(newPlanes);
+        Debug.Log("Added "+newPlanes.Length+" planes.");
 
         if (planes.Count >= minPlanesRequired) {
             Debug.Log("Yay");

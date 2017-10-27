@@ -21,14 +21,16 @@ public class RoomBox : MonoBehaviour {
     private bool planeFindingInProgress = false;
     private float lastPlaneFindingFinishTime;
     private bool previousPlaneFindInProgress = false;
+    float maxFloor = 0, maxCeiling = 0;
+    BoundedPlane maxFloorPlane, maxCeilingPlane;
 
-    void Start () {
+    void Start() {
         lastPlaneFindingFinishTime = Time.realtimeSinceStartup;
         scanManager = scanManagerObject.GetComponent<ScanManager>() as ScanManager;
         scanManager.OnMeshUpdate += OnMeshUpdate;
-	}
-	
-	void Update () {
+    }
+
+    void Update() {
         // triggers when the worker finished
         if (previousPlaneFindInProgress && !planeFindingInProgress) {
             lastPlaneFindingFinishTime = Time.realtimeSinceStartup;
@@ -37,10 +39,13 @@ public class RoomBox : MonoBehaviour {
         previousPlaneFindInProgress = planeFindingInProgress;
 
         // start plane finding worker
-		if (scanManager.numberOfBakedSurfaces >= minSurfacesRequired &&
+        if (scanManager.numberOfBakedSurfaces >= minSurfacesRequired &&
             !planeFindingInProgress &&
             Time.realtimeSinceStartup >= lastPlaneFindingFinishTime + 1.0f) { // wait 1 sec to not clog up
                                                                               // Copy / Convert mesh data
+
+            if (maxFloor != 0)
+                return;
 
             Debug.Log("Copy surfaces.");
             meshData.Clear();
@@ -54,27 +59,88 @@ public class RoomBox : MonoBehaviour {
             Debug.Log("Done copy surfaces.");
 
             planeFindingInProgress = true;
+#if !UNITY_EDITOR && UNITY_WSA
+            await System.Threading.Tasks.Task.Run(() => HoloFindPlanes());
+#else
             ThreadPool.QueueUserWorkItem(FindPlanes);
+#endif
 
         }
-	}
+    }
 
+#if !UNITY_EDITOR && UNITY_WSA
+    private async System.Threading.Tasks.Task HoloFindPlanes() {
+#else
     private void FindPlanes(object state) {
+#endif
         newPlanes = PlaneFinding.FindSubPlanes(meshData, 0.0f);
         Debug.Log("Added " + newPlanes.Length + " planes.");
         planeFindingInProgress = false;
     }
+
 
     void OnMeshUpdate(object sender, EventArgs args) {
         Debug.Log("Got an update");
     }
 
     void OnPlanesFound() {
+        if (maxFloor != 0)
+            return; // rewrite to state
         planes.AddRange(newPlanes);
-        Debug.Log("Added "+newPlanes.Length+" planes.");
+        Debug.Log("Added " + newPlanes.Length + " planes.");
 
         if (planes.Count >= minPlanesRequired) {
             Debug.Log("Yay");
+            CalculateRoomBox();
         }
+    }
+
+    void CalculateRoomBox() {
+        if (maxFloor != 0)
+            return; // only calculate once
+
+        List<BoundedPlane> floors = new List<BoundedPlane>();
+        List<BoundedPlane> ceilings = new List<BoundedPlane>();
+        List<BoundedPlane> walllike = new List<BoundedPlane>();
+
+        foreach (BoundedPlane plane in planes) {
+            if (Vector3.Angle(Vector3.up, plane.Plane.normal) <= 5) {
+                floors.Add(plane);
+                if (plane.Bounds.Center.y < maxFloor) {
+                    maxFloor = plane.Bounds.Center.y;
+                    maxFloorPlane = plane;
+                }
+            }
+            else if (Vector3.Angle(Vector3.down, plane.Plane.normal) <= 5) {
+                ceilings.Add(plane);
+                if (plane.Bounds.Center.y > maxCeiling) {
+                    maxCeiling = plane.Bounds.Center.y;
+                    maxCeilingPlane = plane;
+                }
+            }
+            else
+                walllike.Add(plane);
+        }
+
+        Transform floor = transform.Find("Floor");
+        floor.gameObject.SetActive(true);
+        floor.position = new Vector3(floor.position.x, maxFloorPlane.Bounds.Center.y, floor.position.z);
+
+        Transform ceiling = transform.Find("Ceiling");
+        ceiling.gameObject.SetActive(true);
+        ceiling.position = new Vector3(ceiling.position.x, maxCeilingPlane.Bounds.Center.y, ceiling.position.z);
+
+        Debug.Log("Calculated!");
+    }
+
+    void OnDrawGizmos() {
+        if (maxFloor == 0) return;
+
+        // floor
+        Gizmos.color = Color.red;
+        //Gizmos.DrawCube(maxFloorPlane.Bounds.Center, new Vector3(5, 0.01f, 5));
+        // ceiling
+        Gizmos.color = Color.yellow;
+        //Gizmos.DrawCube(maxCeilingPlane.Bounds.Center, new Vector3(5, 0.01f, 5));
     }
 }

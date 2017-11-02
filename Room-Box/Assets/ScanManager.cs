@@ -35,6 +35,8 @@ public class SurfaceEntry {
             meshRenderer.receiveShadows = false;
             meshRenderer.sharedMaterial = new Material(mat);
             meshRenderer.sharedMaterial.SetColor("_WireColor", Color.red);
+
+            this.gameObject.AddComponent<MeshCollider>();
         }
     }
 }
@@ -141,6 +143,12 @@ public class ScanManager : MonoBehaviour {
                 numberOfBakedSurfaces++;
             surfaceEntry.bakedState = BakedState.Baked;
             surfaceEntry.lastUpdateTime = Time.realtimeSinceStartup;
+
+            if (renderMeshes) {
+                MeshCollider mc = surfaceEntry.gameObject.GetComponent<MeshCollider>();
+                mc.sharedMesh = null;
+                mc.sharedMesh = surfaceEntry.gameObject.GetComponent<MeshFilter>().sharedMesh;
+            }
 
             OnMeshUpdate(this, new EventArgs());
         }

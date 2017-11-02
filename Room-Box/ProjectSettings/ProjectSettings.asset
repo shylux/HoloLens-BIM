@@ -514,11 +514,11 @@ PlayerSettings:
   m_MobileRenderingPath: 1
   metroPackageName: Room-Box
   metroPackageVersion: 
-  metroCertificatePath: 
+  metroCertificatePath: I:\HoloLens-BIM\Room-Box\Assets\WSATestCertificate.pfx
   metroCertificatePassword: 
-  metroCertificateSubject: 
-  metroCertificateIssuer: 
-  metroCertificateNotAfter: 0000000000000000
+  metroCertificateSubject: DefaultCompany
+  metroCertificateIssuer: DefaultCompany
+  metroCertificateNotAfter: 00eda02d056ed401
   metroApplicationDescription: Room-Box
   wsaImages: {}
   metroTileShortName: 

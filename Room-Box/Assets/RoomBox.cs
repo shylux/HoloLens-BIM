@@ -59,25 +59,18 @@ public class RoomBox : MonoBehaviour {
             Debug.Log("Done copy surfaces.");
 
             planeFindingInProgress = true;
-#if !UNITY_EDITOR && UNITY_WSA
-            await System.Threading.Tasks.Task.Run(() => HoloFindPlanes());
-#else
-            ThreadPool.QueueUserWorkItem(FindPlanes);
-#endif
-
+            FindPlanes();
         }
     }
 
-#if !UNITY_EDITOR && UNITY_WSA
-    private async System.Threading.Tasks.Task HoloFindPlanes() {
-#else
-    private void FindPlanes(object state) {
-#endif
+
+    private void FindPlanes() {
         newPlanes = PlaneFinding.FindSubPlanes(meshData, 0.0f);
         Debug.Log("Added " + newPlanes.Length + " planes.");
         planeFindingInProgress = false;
-    }
 
+        OnPlanesFound();
+    }
 
     void OnMeshUpdate(object sender, EventArgs args) {
         Debug.Log("Got an update");

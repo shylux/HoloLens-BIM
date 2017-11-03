@@ -10,7 +10,9 @@ public class MeshAnalyzer : MonoBehaviour
 {
     private static readonly Vector3 DOWN = Vector3.down;
     private static readonly Vector3 UP = Vector3.up;
+    private static readonly Vector3 FORWARD = Vector3.forward;
     private const float UPPER_LIMIT = 5f;
+    private const int UPPER_ANGLE = 20;
 
     public HashSet<Vector3> downNormals = new HashSet<Vector3>();
     public HashSet<Vector3> upNormals = new HashSet<Vector3>();
@@ -18,22 +20,16 @@ public class MeshAnalyzer : MonoBehaviour
 
     public float scanTime = 30.0f;
 
-    private bool meshProcessed = false;
     private bool analyze = false;
-
-    // Use this for initialization
-    void Start()
-    {
-
-    }
 
     // Update is called once per frame
     private void Update()
     {
 
-        if (meshProcessed || ((Time.time - SpatialMappingManager.Instance.StartTime) < scanTime))
+        if (analyze || ((Time.time - SpatialMappingManager.Instance.StartTime) < scanTime))
         {
             // Wait until enough time has passed before processing the mesh.
+            Debug.Log("No mesh analysis for now.");
         }
         else
         {
@@ -42,8 +38,10 @@ public class MeshAnalyzer : MonoBehaviour
                 SpatialMappingManager.Instance.StopObserver();
             }
 
+            analyze = true;
             StartCoroutine(AnalyzeRoutine());
-            meshProcessed = true;
+            categorizeHorizontals(horizontalNormals);
+            
         }
     }
 
@@ -52,6 +50,7 @@ public class MeshAnalyzer : MonoBehaviour
         Debug.Log("Start mesh analysis");
         List<MeshFilter> filters = SpatialMappingManager.Instance.GetMeshFilters();
         Dictionary<Vector3, int> histogram = new Dictionary<Vector3, int>(new Vector3CoordComparer());
+        int totalNormals = 0;
 
         for (int index = 0; index < filters.Count; index++)
         {
@@ -60,6 +59,7 @@ public class MeshAnalyzer : MonoBehaviour
             {
                 filter.mesh.RecalculateNormals();
                 Vector3[] normals = filter.mesh.normals;
+                totalNormals += normals.Length;
 
                 foreach (Vector3 normal in normals)
                 {
@@ -68,7 +68,10 @@ public class MeshAnalyzer : MonoBehaviour
             }
         }
 
+        Debug.Log("Total normals: " + totalNormals);
         Debug.Log("Normals categorized! Up's: " + upNormals.Count + " Down's: " + downNormals.Count + " Horizontal's: " + horizontalNormals.Count);
+
+        yield return null;
 
         foreach (Vector3 n in upNormals)
         {
@@ -86,6 +89,8 @@ public class MeshAnalyzer : MonoBehaviour
         }
 
         yield return null;
+
+        categorizeHorizontals(horizontalNormals);
     }
 
     private void categorizeNormal(Vector3 normal)
@@ -101,6 +106,64 @@ public class MeshAnalyzer : MonoBehaviour
         else if (Vector3.Angle(new Vector3(normal.x, 0, normal.z), normal) <= UPPER_LIMIT)
         {
             horizontalNormals.Add(normal);
+        }
+    }
+
+    private void categorizeHorizontals(HashSet<Vector3> horizontalNormals)
+    {
+        Debug.Log("Start horizontals categorization");
+        Dictionary<float, Vector3> orientationMap = new Dictionary<float, Vector3>();
+
+        foreach (Vector3 n in horizontalNormals)
+        {
+            float angle = Vector3.Angle(new Vector3(n.x, 0, n.z), FORWARD);
+            if (!orientationMap.ContainsKey(angle))
+            {
+                orientationMap.Add(angle, n);
+            }
+        }
+
+        int position = 0;
+        HashSet<Vector3> maxSubset = new HashSet<Vector3>();
+
+        int thresholdSpace = 4 * UPPER_ANGLE;
+        Debug.Log("thresholdSpace: " + thresholdSpace);
+
+        while (position < 90)
+        {
+            HashSet<Vector3> subset = new HashSet<Vector3>();
+            for (int i = 0; i < thresholdSpace; i++)
+            {
+                //Vector3 n;
+                float index = ((i / UPPER_ANGLE) * 90) + (i % UPPER_ANGLE) + position;
+                float upperBound = (index + 0.5f) % 360;
+                float lowerBound = (index - 0.5f) % 360;
+
+                Debug.Log("position: " + position + "i: " + i + "index: " + index + " upperBound: " + upperBound + " lowerBound: " + lowerBound);
+                IEnumerable<KeyValuePair<float, Vector3>> matches =  orientationMap.Where(kvp => kvp.Key < upperBound && kvp.Key >= lowerBound);
+
+                foreach (KeyValuePair<float, Vector3> m in matches)
+                {
+                    if (!subset.Contains(m.Value))
+                    {
+                        subset.Add(m.Value);
+                    }
+                }
+            }
+
+            Debug.Log("Subset with " + subset.Count + " normals found.");
+            if (subset.Count > maxSubset.Count)
+            {
+                Debug.Log("new max");
+                maxSubset = subset;
+            }
+            Debug.Log("position " + position);
+            position = position + 1;
+        }
+
+        foreach (Vector3 n in maxSubset)
+        {
+            Debug.DrawLine(new Vector3(0, 0, 0), n, Color.yellow, 300f, false);
         }
     }
 

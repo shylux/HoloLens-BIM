@@ -1,9 +1,8 @@
 ﻿using HoloToolkit.Unity;
-using System;
-using System.Collections;
-using System.Collections.Generic;
 using UnityEngine;
+using System.Linq;
 
+[RequireComponent(typeof(Camera))]
 public class ScanProgress: Singleton<ScanProgress> {
 
     protected ScanProgress() { }
@@ -20,14 +19,43 @@ public class ScanProgress: Singleton<ScanProgress> {
         }
     }
 
+    public enum State {
+        InProgress,
+        Finished
+    }
+
+    /* There are two ways to determine the scan progress.
+     * SingleFrame requires a sensor to detect a wall on this frame to be counted towards the total.
+     * On continuous strategy a sensor is counted as long as he detected a wall at any time since the start of the app.
+     * */
+    public enum Strategy {
+        SingleFrame,
+        Continuous
+    }
+
+    private State state = State.InProgress;
+
+    [Tooltip("SingleFrame: sensor has to detect on the same frame.\n" +
+             "Continuous: sensor has to detect only once.")]
+    public Strategy progressStrategy = Strategy.Continuous;
+
+    [Range(0.0f, 1.0f)]
+    public float PercentConsideredFinished = 0.5f;
+
     // sensors in each direction
     // first order is longitude, second latitude
     Sensor[,] sensors;
 
-    // degrees between each sensor
-    private int frequency = 20;
+    // max degrees between each sensor
+    private int frequency = 10;
+
+    // Speech output
+    TextToSpeech tts;
 
     void Start() {
+        tts = GetComponentInChildren<TextToSpeech>();
+        tts.StartSpeaking("Well, hello there!");
+
         sensors = new Sensor[360 / frequency, 180 / frequency];
         
         for (int ilng = 0; ilng < sensors.GetLength(0); ilng++) {
@@ -52,15 +80,73 @@ public class ScanProgress: Singleton<ScanProgress> {
     }
 
     void Update() {
+        // disable when finished
+        if (state == State.Finished) return;
+
         // check each sensor
         foreach (Sensor sensor in sensors) {
-            if (Physics.Raycast(transform.position, sensor.direction))
-                sensor.detected = true;
-        }
+            if (progressStrategy == Strategy.SingleFrame) // reset the detection state on singleframe strategy
+                sensor.detected = false;
 
-        foreach (Sensor sensor in sensors) {
+            // do raycast, but only if the sensor didn't already detect
+            if (!sensor.detected && Physics.Raycast(transform.position, sensor.direction))
+                sensor.detected = true;
+
+            // draw debug rays
             Color sensorColor = (sensor.detected) ? Color.green : Color.red;
             Debug.DrawRay(transform.position, sensor.direction, sensorColor);
         }
+
+        // check if progress is considered finished
+        bool[] progress = CheckProgress();
+
+        if (progress.All(b => b)) {
+            state = State.Finished;
+            return;
+        }
+
+        GiveDirections();
+    }
+
+    /**
+     * Checks if progress in every direction exceeds a predefined threshhold.
+     * */
+    private bool[] CheckProgress() {
+        // first 8 for walls then floor & ceiling
+        bool[] progressByDirection = new bool[10];
+
+        // check walls
+        // walls sensors are ±30 degrees latidute
+        // the checks are done in 45 deg longitude intervalls
+        for (int i = 0; i < 8; i++) {
+            // the % operation isn't actually modulo. it will leave negative numbers in place
+            var wallSens = from Sensor s in sensors
+                       where s.lat > -30 && s.lat < 30 && (s.lng+360) % 360 >= i*45 && (s.lng+360) % 360 < (i+1)*45
+                       select s;
+
+            progressByDirection[i] = (wallSens.Count(s => s.detected) / wallSens.Count() > PercentConsideredFinished);
+        }
+
+        // check floor
+        var floorSens = from Sensor s in sensors
+                        where s.lat <= -30
+                        select s;
+        progressByDirection[8] = (floorSens.Count(s => s.detected) / floorSens.Count() > PercentConsideredFinished);
+
+        // check ceiling
+        var ceilingSens = from Sensor s in sensors
+                        where s.lat >= 30
+                        select s;
+        progressByDirection[9] = (ceilingSens.Count(s => s.detected) / ceilingSens.Count() > PercentConsideredFinished);
+
+        return progressByDirection;
+    }
+
+    private void GiveDirections() {
+
+    }
+
+    public bool isFinished() {
+        return (state == State.Finished);
     }
 }

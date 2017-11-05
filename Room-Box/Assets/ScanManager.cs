@@ -15,7 +15,7 @@ public enum BakedState {
     PendingUpdatePostBake = 2
 }
 
-class SurfaceEntry {
+public class SurfaceEntry {
     public int id; // ID used by the HoloLens
     public GameObject gameObject; // holds mesh, anchor and renderer
     public float lastUpdateTime;
@@ -35,6 +35,8 @@ class SurfaceEntry {
             meshRenderer.receiveShadows = false;
             meshRenderer.sharedMaterial = new Material(mat);
             meshRenderer.sharedMaterial.SetColor("_WireColor", Color.red);
+
+            this.gameObject.AddComponent<MeshCollider>();
         }
     }
 }
@@ -42,7 +44,7 @@ class SurfaceEntry {
 public class ScanManager : MonoBehaviour {
 
     private SurfaceObserver observer;
-    private Dictionary<int, SurfaceEntry> surfaces = new Dictionary<int, SurfaceEntry>();
+    public Dictionary<int, SurfaceEntry> surfaces = new Dictionary<int, SurfaceEntry>();
 
     // Update frequency
     private float lastUpdateTime;
@@ -52,6 +54,9 @@ public class ScanManager : MonoBehaviour {
     //TODO: Maybe implement as priority queue. Depends on whether we have enough data to queue.
     Queue<SurfaceEntry> bakingQueue = new Queue<SurfaceEntry>();
     bool isBaking = false;
+    public int numberOfBakedSurfaces = 0;
+
+    public event EventHandler OnMeshUpdate;
 
     // Rendering
     [Header("Rendering")]
@@ -134,8 +139,18 @@ public class ScanManager : MonoBehaviour {
         isBaking = false;
         SurfaceEntry surfaceEntry;
         if (surfaces.TryGetValue(surfaceData.id.handle, out surfaceEntry)) {
+            if (surfaceEntry.bakedState == BakedState.NeverBaked)
+                numberOfBakedSurfaces++;
             surfaceEntry.bakedState = BakedState.Baked;
             surfaceEntry.lastUpdateTime = Time.realtimeSinceStartup;
+
+            if (renderMeshes) {
+                MeshCollider mc = surfaceEntry.gameObject.GetComponent<MeshCollider>();
+                mc.sharedMesh = null;
+                mc.sharedMesh = surfaceEntry.gameObject.GetComponent<MeshFilter>().sharedMesh;
+            }
+
+            OnMeshUpdate(this, new EventArgs());
         }
     }
 }

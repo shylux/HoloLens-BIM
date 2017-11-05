@@ -40,7 +40,9 @@ public class ScanProgress: Singleton<ScanProgress> {
     public Strategy progressStrategy = Strategy.Continuous;
 
     [Range(0.0f, 1.0f)]
-    public float PercentConsideredFinished = 0.5f;
+    public float percentConsideredFinished = 0.5f;
+
+    public float timeBetweenHints = 5f;
 
     // sensors in each direction
     // first order is longitude, second latitude
@@ -54,7 +56,9 @@ public class ScanProgress: Singleton<ScanProgress> {
 
     void Start() {
         tts = GetComponentInChildren<TextToSpeech>();
-        tts.StartSpeaking("Well, hello there!");
+        tts.StartSpeaking("Starting scanning process.");
+
+        lastHintTime = Time.realtimeSinceStartup;
 
         sensors = new Sensor[360 / frequency, 180 / frequency];
         
@@ -102,10 +106,11 @@ public class ScanProgress: Singleton<ScanProgress> {
 
         if (progress.All(b => b)) {
             state = State.Finished;
+            tts.StartSpeaking("Well done. Scann process complete.");
             return;
         }
 
-        GiveDirections();
+        GiveDirectionHints(progress);
     }
 
     /**
@@ -121,32 +126,99 @@ public class ScanProgress: Singleton<ScanProgress> {
         for (int i = 0; i < 8; i++) {
             // the % operation isn't actually modulo. it will leave negative numbers in place
             var wallSens = from Sensor s in sensors
-                       where s.lat > -30 && s.lat < 30 && (s.lng+360) % 360 >= i*45 && (s.lng+360) % 360 < (i+1)*45
+                       where s.lat > -30 && s.lat < 30 && mod(s.lng, 360) >= i*45 && mod(s.lng, 360) < (i+1)*45
                        select s;
 
-            progressByDirection[i] = (wallSens.Count(s => s.detected) / wallSens.Count() > PercentConsideredFinished);
+            progressByDirection[i] = (wallSens.Count(s => s.detected) / wallSens.Count() > percentConsideredFinished);
         }
 
         // check floor
         var floorSens = from Sensor s in sensors
                         where s.lat <= -30
                         select s;
-        progressByDirection[8] = (floorSens.Count(s => s.detected) / floorSens.Count() > PercentConsideredFinished);
+        progressByDirection[8] = (floorSens.Count(s => s.detected) / floorSens.Count() > percentConsideredFinished);
 
         // check ceiling
         var ceilingSens = from Sensor s in sensors
                         where s.lat >= 30
                         select s;
-        progressByDirection[9] = (ceilingSens.Count(s => s.detected) / ceilingSens.Count() > PercentConsideredFinished);
+        progressByDirection[9] = (ceilingSens.Count(s => s.detected) / ceilingSens.Count() > percentConsideredFinished);
 
         return progressByDirection;
     }
 
-    private void GiveDirections() {
+    private float lastHintTime;
+    private int lastSector;
+    private void GiveDirectionHints(bool[] progress) {
+        // stop the constant nagging
+        if (Time.realtimeSinceStartup - lastHintTime < timeBetweenHints) return;
+        lastHintTime = Time.realtimeSinceStartup;
 
+        Camera cam = GetComponent<Camera>();
+        float lookDirection = cam.transform.eulerAngles.y;
+
+        int sector = Mathf.FloorToInt(lookDirection / 45);
+        bool sectorDidntChange = (sector == lastSector);
+        lastSector = sector;
+
+        // check front
+        if (!progress[sector] ||
+            (!sectorDidntChange && !progress[mod(sector + 1, 8)]) ||
+            (!sectorDidntChange && !progress[mod(sector - 1, 8)])) {
+            tts.StartSpeaking("Keep going.");
+            return;
+        }
+
+        // check a bit right
+        if (!progress[mod(sector + 1, 8)]) {
+            tts.StartSpeaking("A bit to your right.");
+            return;
+        }
+
+        // check a bit left
+        if (!progress[mod(sector + 1, 8)]) {
+            tts.StartSpeaking("A bit to your left.");
+            return;
+        }
+
+        // check right
+        if (!progress[mod(sector + 2, 8)]) {
+            tts.StartSpeaking("Scan the area to your right.");
+            return;
+        }
+
+        // check left
+        if (!progress[mod(sector - 2, 8)]) {
+            tts.StartSpeaking("Scan the area to your left.");
+            return;
+        }
+
+        // check behind
+        if (!progress[mod(sector + 3, 8)] ||
+            !progress[mod(sector + 4, 8)] ||
+            !progress[mod(sector + 5, 8)]) {
+            tts.StartSpeaking("Scan the area behind you.");
+            return;
+        }
+
+        // check floor
+        if (!progress[8]) {
+            tts.StartSpeaking("Scan the floor.");
+            return;
+        }
+
+        // check ceiling
+        if (!progress[9]) {
+            tts.StartSpeaking("Scan the ceiling.");
+            return;
+        }
     }
 
     public bool isFinished() {
         return (state == State.Finished);
+    }
+
+    public int mod(float val, int basis) {
+        return Mathf.FloorToInt((val + basis) % basis);
     }
 }

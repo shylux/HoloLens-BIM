@@ -1,4 +1,5 @@
-﻿using System.Collections;
+﻿using HoloToolkit.Unity.SpatialMapping;
+using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
 
@@ -7,11 +8,14 @@ public class MiniMap : MonoBehaviour {
     public enum State { MAXI_MAP, MINI_MAP }
 
     public State state = State.MAXI_MAP;
-    private float transitionStartTime;
+    
 
     public Material lineMaterial;
-    public float tableScaleFactor = 10;
+    public float tableScaleFactor = 15;
     public float transitionTime = 0.5f;
+
+    bool placedDown = false;
+    private Vector3 placedDownPosition;
     
 	void Start () {
 
@@ -23,10 +27,17 @@ public class MiniMap : MonoBehaviour {
         float transitionProgress = (Time.realtimeSinceStartup - transitionStartTime) / transitionTime;
         switch (state) {
             case State.MAXI_MAP:
-                transform.localScale = Vector3.Lerp(Vector3.one / tableScaleFactor, Vector3.one, transitionProgress);
+                transform.localScale = Vector3.Lerp(transitionStartScale, Vector3.one, transitionProgress);
+                transform.position = Vector3.Lerp(transitionStartPosition, Vector3.zero, transitionProgress);
+                foreach (LineRenderer rend in GetComponentsInChildren<LineRenderer>())
+                    rend.widthMultiplier = Mathf.Lerp(transitionStartLineWidth, 0.05f, transitionProgress);
                 break;
             case State.MINI_MAP:
-                transform.localScale = Vector3.Lerp(Vector3.one, Vector3.one / tableScaleFactor, transitionProgress);
+                transform.localScale = Vector3.Lerp(transitionStartScale, Vector3.one / tableScaleFactor, transitionProgress);
+                Vector3 targetPosition = (placedDown) ? placedDownPosition : getGazePlacement();
+                transform.position = Vector3.Lerp(transitionStartPosition, targetPosition, transitionProgress);
+                foreach (LineRenderer rend in GetComponentsInChildren<LineRenderer>())
+                    rend.widthMultiplier = Mathf.Lerp(transitionStartLineWidth, 0.01f, transitionProgress);
                 break;
             default:
                 Debug.Log("Something went reeealy wrong.");
@@ -34,16 +45,47 @@ public class MiniMap : MonoBehaviour {
         }
     }
 
+    private Vector3 getGazePlacement() {
+        RaycastHit hitInfo;
+        if (Physics.Raycast(Camera.main.transform.position, Camera.main.transform.forward, out hitInfo, 1.5f, SpatialMappingManager.Instance.LayerMask)) {
+            return hitInfo.point;
+        }
+        return Camera.main.transform.position + Camera.main.transform.forward * 1.5f;
+    }
+
+    private float transitionStartTime;
+    private Vector3 transitionStartPosition = Vector3.zero;
+    private Vector3 transitionStartScale = Vector3.one;
+    private float transitionStartLineWidth;
     public void setState(string stateName) {
         if (stateName == "MAXI_MAP" && state != State.MAXI_MAP) {
             // transition to maxi map
             state = State.MAXI_MAP;
-            transitionStartTime = Time.realtimeSinceStartup;
+            startTransition();
+
         } else if (stateName == "MINI_MAP" && state != State.MINI_MAP) {
             // transition to mini map
             state = State.MINI_MAP;
-            transitionStartTime = Time.realtimeSinceStartup;
+            startTransition();
         }
+    }
+
+    private void startTransition() {
+        transitionStartTime = Time.realtimeSinceStartup;
+        transitionStartPosition = transform.position;
+        transitionStartScale = transform.localScale;
+        transitionStartLineWidth = GetComponentInChildren<LineRenderer>().widthMultiplier;
+    }
+
+    public void placeDown() {
+        if (state != State.MINI_MAP) return;
+        placedDown = true;
+        placedDownPosition = transform.position;
+    }
+
+    public void pickUp() {
+        if (state != State.MINI_MAP) return;
+        placedDown = false;
     }
 
     public void addCube(Vector3[] corners) {

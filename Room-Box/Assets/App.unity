@@ -155,6 +155,10 @@ MonoBehaviour:
     KeyCode: 100
   - Keyword: Maximap
     KeyCode: 102
+  - Keyword: Place down
+    KeyCode: 32
+  - Keyword: Pick up
+    KeyCode: 304
   RecognitionConfidenceLevel: 1
 --- !u!4 &261806946 stripped
 Transform:
@@ -390,6 +394,40 @@ MonoBehaviour:
         - m_Target: {fileID: 1453669090}
           m_MethodName: setState
           m_Mode: 5
+          m_Arguments:
+            m_ObjectArgument: {fileID: 0}
+            m_ObjectArgumentAssemblyTypeName: UnityEngine.Object, UnityEngine
+            m_IntArgument: 0
+            m_FloatArgument: 0
+            m_StringArgument: MAXI_MAP
+            m_BoolArgument: 0
+          m_CallState: 2
+      m_TypeName: UnityEngine.Events.UnityEvent, UnityEngine, Version=0.0.0.0, Culture=neutral,
+        PublicKeyToken=null
+  - Keyword: Place down
+    Response:
+      m_PersistentCalls:
+        m_Calls:
+        - m_Target: {fileID: 1453669090}
+          m_MethodName: placeDown
+          m_Mode: 1
+          m_Arguments:
+            m_ObjectArgument: {fileID: 0}
+            m_ObjectArgumentAssemblyTypeName: UnityEngine.Object, UnityEngine
+            m_IntArgument: 0
+            m_FloatArgument: 0
+            m_StringArgument: MAXI_MAP
+            m_BoolArgument: 0
+          m_CallState: 2
+      m_TypeName: UnityEngine.Events.UnityEvent, UnityEngine, Version=0.0.0.0, Culture=neutral,
+        PublicKeyToken=null
+  - Keyword: Pick up
+    Response:
+      m_PersistentCalls:
+        m_Calls:
+        - m_Target: {fileID: 1453669090}
+          m_MethodName: pickUp
+          m_Mode: 1
           m_Arguments:
             m_ObjectArgument: {fileID: 0}
             m_ObjectArgumentAssemblyTypeName: UnityEngine.Object, UnityEngine

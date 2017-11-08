@@ -17,6 +17,15 @@ public class MeshAnalyzer : MonoBehaviour
     public HashSet<Vector3> upNormals = new HashSet<Vector3>();
     public HashSet<Vector3> horizontalNormals = new HashSet<Vector3>();
 
+    public bool drawUpNormals = false;
+    public Color colorUpNormals = Color.red;
+    public bool drawDownNormals = false;
+    public Color colorDownNormals = Color.blue;
+    public bool drawHorizontalNormals = false;
+    public Color colorHorizontalNormals = Color.green;
+
+    private float drawDuration = 300f;
+
     public float scanTime = 30.0f;
 
 
@@ -72,7 +81,6 @@ public class MeshAnalyzer : MonoBehaviour
                     Vector3 dir = Vector3.Normalize(Vector3.Cross(v1 - v0, v2 - v0));
                     dir /= 10;
 
-                    Debug.DrawRay(center, dir, Color.black, 300f);
                 }
 
                 for (int i = 0; i < vertices.Length; i++)
@@ -81,9 +89,8 @@ public class MeshAnalyzer : MonoBehaviour
                     Vector3 normal = filter.transform.TransformDirection(normals[i].normalized);
                     normal /= 10;
 
-                    categorizeNormal(normal);
-
-                    Debug.DrawRay(vertice, normal, Color.red, 300f);
+                    categorizeNormal(normal, vertice);
+                    
                 }
             }
             yield return null;
@@ -93,39 +100,28 @@ public class MeshAnalyzer : MonoBehaviour
 
         yield return null;
 
-        foreach (Vector3 n in upNormals)
-        {
-            Debug.DrawRay(transform.TransformPoint(new Vector3(0, 0, 0)), n, Color.red, 300f, false);
-        }
-
-        foreach (Vector3 n in downNormals)
-        {
-            Debug.DrawRay(transform.TransformPoint(new Vector3(0, 0, 0)), n, Color.blue, 300f, false);
-        }
-
-        foreach (Vector3 n in horizontalNormals)
-        {
-            Debug.DrawRay(transform.TransformPoint(new Vector3(0, 0, 0)), n, Color.green, 300f, false);
-        }
-
-        yield return null;
-
         categorizeHorizontals(horizontalNormals);
     }
 
-    private void categorizeNormal(Vector3 normal)
+    private void categorizeNormal(Vector3 normal, Vector3 origin)
     {
         if (Vector3.Angle(UP, normal) <= UPPER_LIMIT)
         {
             upNormals.Add(normal);
+            if (drawUpNormals)
+                Debug.DrawRay(origin, normal.normalized, colorUpNormals, drawDuration);
         }
         else if (Vector3.Angle(DOWN, normal) <= UPPER_LIMIT)
         {
             downNormals.Add(normal);
+            if (drawDownNormals)
+                Debug.DrawRay(origin, normal.normalized, colorDownNormals, drawDuration);
         }
         else if (Vector3.Angle(new Vector3(normal.x, 0, normal.z), normal) <= UPPER_LIMIT)
         {
             horizontalNormals.Add(normal);
+            if (drawHorizontalNormals)
+                Debug.DrawRay(origin, normal.normalized, colorHorizontalNormals, drawDuration);
         }
     }
 

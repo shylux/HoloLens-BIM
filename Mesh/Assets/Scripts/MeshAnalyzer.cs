@@ -15,7 +15,12 @@ public class MeshAnalyzer : MonoBehaviour
 
     public HashSet<Vector3> downNormals = new HashSet<Vector3>();
     public HashSet<Vector3> upNormals = new HashSet<Vector3>();
-    public HashSet<Vector3> horizontalNormals = new HashSet<Vector3>();
+    private HashSet<Line> horizontalNormals = new HashSet<Line>();
+
+    public float scanTime = 30.0f;
+
+    [Range(0.0f, 1.0f)]
+    public float normalsScale = 1.0f;
 
     public bool drawUpNormals = false;
     public Color colorUpNormals = Color.red;
@@ -23,10 +28,12 @@ public class MeshAnalyzer : MonoBehaviour
     public Color colorDownNormals = Color.blue;
     public bool drawHorizontalNormals = false;
     public Color colorHorizontalNormals = Color.green;
+    public bool drawWallNormals = false;
+    public Color colorWallNormals = Color.yellow;
 
     private float drawDuration = 300f;
 
-    public float scanTime = 30.0f;
+    
 
 
     private bool analyze = false;
@@ -79,18 +86,16 @@ public class MeshAnalyzer : MonoBehaviour
                     Vector3 v2 = filter.transform.TransformPoint(vertices[triangles[i + 2]]);
                     Vector3 center = (v0 + v1 + v2) / 3;
                     Vector3 dir = Vector3.Normalize(Vector3.Cross(v1 - v0, v2 - v0));
-                    dir /= 10;
 
+                    //categorizeNormal(dir, center);
                 }
 
                 for (int i = 0; i < vertices.Length; i++)
                 {
                     Vector3 vertice = filter.transform.TransformPoint(vertices[i]);
                     Vector3 normal = filter.transform.TransformDirection(normals[i].normalized);
-                    normal /= 10;
 
                     categorizeNormal(normal, vertice);
-                    
                 }
             }
             yield return null;
@@ -109,54 +114,55 @@ public class MeshAnalyzer : MonoBehaviour
         {
             upNormals.Add(normal);
             if (drawUpNormals)
-                Debug.DrawRay(origin, normal.normalized, colorUpNormals, drawDuration);
+                Debug.DrawRay(origin, normal.normalized * normalsScale, colorUpNormals, drawDuration);
         }
         else if (Vector3.Angle(DOWN, normal) <= UPPER_LIMIT)
         {
             downNormals.Add(normal);
             if (drawDownNormals)
-                Debug.DrawRay(origin, normal.normalized, colorDownNormals, drawDuration);
+                Debug.DrawRay(origin, normal.normalized * normalsScale, colorDownNormals, drawDuration);
         }
         else if (Vector3.Angle(new Vector3(normal.x, 0, normal.z), normal) <= UPPER_LIMIT)
         {
-            horizontalNormals.Add(normal);
+            horizontalNormals.Add(new Line(origin, normal));
             if (drawHorizontalNormals)
-                Debug.DrawRay(origin, normal.normalized, colorHorizontalNormals, drawDuration);
+                Debug.DrawRay(origin, normal.normalized * normalsScale, colorHorizontalNormals, drawDuration, true);
         }
     }
 
-    private void categorizeHorizontals(HashSet<Vector3> horizontalNormals)
+    private void categorizeHorizontals(HashSet<Line> horizontalNormals)
     {
         Debug.Log("Start horizontals categorization");
-        Dictionary<float, Vector3> orientationMap = new Dictionary<float, Vector3>();
+        Dictionary<float, Line> orientationMap = new Dictionary<float, Line>();
 
-        foreach (Vector3 n in horizontalNormals)
+        foreach (Line l in horizontalNormals)
         {
+            Vector3 n = l.Direction;
             float angle = Vector3.Angle(new Vector3(n.x, 0, n.z), FORWARD);
             if (!orientationMap.ContainsKey(angle))
             {
-                orientationMap.Add(angle, n);
+                orientationMap.Add(angle, l);
             }
         }
 
         int position = 0;
-        HashSet<Vector3> maxSubset = new HashSet<Vector3>();
+        HashSet<Line> maxSubset = new HashSet<Line>();
 
         int thresholdSpace = 4 * UPPER_ANGLE;
         Debug.Log("thresholdSpace: " + thresholdSpace);
 
         while (position < 90)
         {
-            HashSet<Vector3> subset = new HashSet<Vector3>();
+            HashSet<Line> subset = new HashSet<Line>();
             for (int i = 0; i < thresholdSpace; i++)
             {
                 float index = ((i / UPPER_ANGLE) * 90) + (i % UPPER_ANGLE) + position;
                 float upperBound = (index + 0.5f) % 360;
                 float lowerBound = (index - 0.5f) % 360;
 
-                IEnumerable<KeyValuePair<float, Vector3>> matches = orientationMap.Where(kvp => kvp.Key < upperBound && kvp.Key >= lowerBound);
+                IEnumerable<KeyValuePair<float, Line>> matches = orientationMap.Where(kvp => kvp.Key < upperBound && kvp.Key >= lowerBound);
 
-                foreach (KeyValuePair<float, Vector3> m in matches)
+                foreach (KeyValuePair<float, Line> m in matches)
                 {
                     if (!subset.Contains(m.Value))
                     {
@@ -175,9 +181,12 @@ public class MeshAnalyzer : MonoBehaviour
             position++;
         }
 
-        foreach (Vector3 n in maxSubset)
+        if (drawWallNormals)
         {
-            Debug.DrawRay(transform.TransformPoint(new Vector3(0, 0, 0)), n, Color.yellow, 300f, false);
+            foreach (Line n in maxSubset)
+            {
+                Debug.DrawRay(n.Origin, n.Direction.normalized * normalsScale, colorWallNormals, drawDuration, true);
+            }
         }
     }
 
@@ -198,6 +207,34 @@ public class MeshAnalyzer : MonoBehaviour
             return Math.Round(obj.x, 1).GetHashCode()
                  ^ Math.Round(obj.y, 1).GetHashCode() << 2
                  ^ Math.Round(obj.z, 1).GetHashCode() >> 2;
+        }
+    }
+
+    class Line
+    {
+        private Vector3 origin;
+        private Vector3 direction;
+
+        public Line(Vector3 origin, Vector3 direction)
+        {
+            this.origin = origin;
+            this.direction = direction;
+        }
+
+        public Vector3 Origin
+        {
+            get
+            {
+                return origin;
+            }
+        }
+
+        public Vector3 Direction
+        {
+            get
+            {
+                return direction;
+            }
         }
     }
 }

@@ -12,19 +12,26 @@ public class MiniMap : MonoBehaviour {
 
     public Material lineMaterial;
     public float tableScaleFactor = 15;
-    public float transitionTime = 0.5f;
+    public float transitionTime = 1f;
 
     bool placedDown = false;
     private Vector3 placedDownPosition;
+
+    private GameObject player;
     
 	void Start () {
-
+        player = transform.Find("Player").gameObject;
         addCube(new Vector3(-0.5f, 1, -0.8f), new Vector3(7, 3, 10));
 	}
 
     void Update() {
-
         float transitionProgress = (Time.realtimeSinceStartup - transitionStartTime) / transitionTime;
+
+        // player position
+        player.SetActive(transitionProgress < 1 || state != State.MAXI_MAP);
+        player.transform.localPosition = Camera.main.transform.position;
+
+        
         switch (state) {
             case State.MAXI_MAP:
                 transform.localScale = Vector3.Lerp(transitionStartScale, Vector3.one, transitionProgress);
@@ -40,7 +47,7 @@ public class MiniMap : MonoBehaviour {
                     rend.widthMultiplier = Mathf.Lerp(transitionStartLineWidth, 0.01f, transitionProgress);
                 break;
             default:
-                Debug.Log("Something went reeealy wrong.");
+                Debug.Log("How do you even...");
                 break;
         }
     }
@@ -53,7 +60,7 @@ public class MiniMap : MonoBehaviour {
         return Camera.main.transform.position + Camera.main.transform.forward * 1.5f;
     }
 
-    private float transitionStartTime;
+    private float transitionStartTime = float.MinValue;
     private Vector3 transitionStartPosition = Vector3.zero;
     private Vector3 transitionStartScale = Vector3.one;
     private float transitionStartLineWidth;

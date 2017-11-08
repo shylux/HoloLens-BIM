@@ -1,5 +1,4 @@
-﻿using HoloToolkit.Unity;
-using HoloToolkit.Unity.SpatialMapping;
+﻿using HoloToolkit.Unity.SpatialMapping;
 using System;
 using System.Collections;
 using System.Collections.Generic;
@@ -20,12 +19,12 @@ public class MeshAnalyzer : MonoBehaviour
 
     public float scanTime = 30.0f;
 
+
     private bool analyze = false;
 
     // Update is called once per frame
     private void Update()
     {
-
         if (analyze || ((Time.time - SpatialMappingManager.Instance.StartTime) < scanTime))
         {
             // Wait until enough time has passed before processing the mesh.
@@ -41,51 +40,72 @@ public class MeshAnalyzer : MonoBehaviour
             analyze = true;
             StartCoroutine(AnalyzeRoutine());
             categorizeHorizontals(horizontalNormals);
-            
         }
     }
 
     private IEnumerator AnalyzeRoutine()
     {
         Debug.Log("Start mesh analysis");
+
         List<MeshFilter> filters = SpatialMappingManager.Instance.GetMeshFilters();
-        Dictionary<Vector3, int> histogram = new Dictionary<Vector3, int>(new Vector3CoordComparer());
-        int totalNormals = 0;
 
         for (int index = 0; index < filters.Count; index++)
         {
             MeshFilter filter = filters[index];
             if (filter != null && filter.sharedMesh != null)
             {
-                filter.mesh.RecalculateNormals();
-                Vector3[] normals = filter.mesh.normals;
-                totalNormals += normals.Length;
+                Mesh mesh = filter.mesh;
+                mesh.RecalculateBounds();
+                mesh.RecalculateNormals();
+                mesh.RecalculateTangents();
 
-                foreach (Vector3 normal in normals)
+                int[] triangles = mesh.triangles;
+                Vector3[] vertices = mesh.vertices;
+                Vector3[] normals = mesh.normals;
+
+                for (int i = 0; i < triangles.Length; i += 3)
                 {
-                    categorizeNormal(Vector3.Normalize(normal));
+                    Vector3 v0 = filter.transform.TransformPoint(vertices[triangles[i]]);
+                    Vector3 v1 = filter.transform.TransformPoint(vertices[triangles[i + 1]]);
+                    Vector3 v2 = filter.transform.TransformPoint(vertices[triangles[i + 2]]);
+                    Vector3 center = (v0 + v1 + v2) / 3;
+                    Vector3 dir = Vector3.Normalize(Vector3.Cross(v1 - v0, v2 - v0));
+                    dir /= 10;
+
+                    Debug.DrawRay(center, dir, Color.black, 300f);
+                }
+
+                for (int i = 0; i < vertices.Length; i++)
+                {
+                    Vector3 vertice = filter.transform.TransformPoint(vertices[i]);
+                    Vector3 normal = filter.transform.TransformDirection(normals[i].normalized);
+                    normal /= 10;
+
+                    categorizeNormal(normal);
+
+                    Debug.DrawRay(vertice, normal, Color.red, 300f);
                 }
             }
+            yield return null;
         }
 
-        Debug.Log("Total normals: " + totalNormals);
         Debug.Log("Normals categorized! Up's: " + upNormals.Count + " Down's: " + downNormals.Count + " Horizontal's: " + horizontalNormals.Count);
 
         yield return null;
 
         foreach (Vector3 n in upNormals)
         {
-            Debug.DrawLine(new Vector3(0, 0, 0), n, Color.red, 300f, false);
+            Debug.DrawRay(transform.TransformPoint(new Vector3(0, 0, 0)), n, Color.red, 300f, false);
         }
 
         foreach (Vector3 n in downNormals)
         {
-            Debug.DrawLine(new Vector3(0, 0, 0), n, Color.blue, 300f, false);
+            Debug.DrawRay(transform.TransformPoint(new Vector3(0, 0, 0)), n, Color.blue, 300f, false);
         }
 
         foreach (Vector3 n in horizontalNormals)
         {
-            Debug.DrawLine(new Vector3(0, 0, 0), n, Color.green, 300f, false);
+            Debug.DrawRay(transform.TransformPoint(new Vector3(0, 0, 0)), n, Color.green, 300f, false);
         }
 
         yield return null;
@@ -134,13 +154,11 @@ public class MeshAnalyzer : MonoBehaviour
             HashSet<Vector3> subset = new HashSet<Vector3>();
             for (int i = 0; i < thresholdSpace; i++)
             {
-                //Vector3 n;
                 float index = ((i / UPPER_ANGLE) * 90) + (i % UPPER_ANGLE) + position;
                 float upperBound = (index + 0.5f) % 360;
                 float lowerBound = (index - 0.5f) % 360;
 
-                Debug.Log("position: " + position + "i: " + i + "index: " + index + " upperBound: " + upperBound + " lowerBound: " + lowerBound);
-                IEnumerable<KeyValuePair<float, Vector3>> matches =  orientationMap.Where(kvp => kvp.Key < upperBound && kvp.Key >= lowerBound);
+                IEnumerable<KeyValuePair<float, Vector3>> matches = orientationMap.Where(kvp => kvp.Key < upperBound && kvp.Key >= lowerBound);
 
                 foreach (KeyValuePair<float, Vector3> m in matches)
                 {
@@ -154,16 +172,16 @@ public class MeshAnalyzer : MonoBehaviour
             Debug.Log("Subset with " + subset.Count + " normals found.");
             if (subset.Count > maxSubset.Count)
             {
-                Debug.Log("new max");
+                Debug.Log("New max Subset with " + subset.Count + " normals found.");
                 maxSubset = subset;
             }
-            Debug.Log("position " + position);
-            position = position + 1;
+
+            position++;
         }
 
         foreach (Vector3 n in maxSubset)
         {
-            Debug.DrawLine(new Vector3(0, 0, 0), n, Color.yellow, 300f, false);
+            Debug.DrawRay(transform.TransformPoint(new Vector3(0, 0, 0)), n, Color.yellow, 300f, false);
         }
     }
 

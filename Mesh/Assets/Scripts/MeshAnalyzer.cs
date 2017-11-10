@@ -11,6 +11,7 @@ public class MeshAnalyzer : MonoBehaviour
     private static readonly Vector3 UP = Vector3.up;
     private static readonly Vector3 FORWARD = Vector3.forward;
     private const float UPPER_LIMIT = 5f;
+    private const float UPPER_PLANE_LIMIT = .1f;
     private const int UPPER_ANGLE = 20;
 
     public HashSet<Vector3> downNormals = new HashSet<Vector3>();
@@ -33,9 +34,6 @@ public class MeshAnalyzer : MonoBehaviour
 
     private float drawDuration = 300f;
 
-    
-
-
     private bool analyze = false;
 
     // Update is called once per frame
@@ -55,7 +53,7 @@ public class MeshAnalyzer : MonoBehaviour
 
             analyze = true;
             StartCoroutine(AnalyzeRoutine());
-            categorizeHorizontals(horizontalNormals);
+            CategorizeHorizontals(horizontalNormals);
         }
     }
 
@@ -64,13 +62,12 @@ public class MeshAnalyzer : MonoBehaviour
         Debug.Log("Start mesh analysis");
 
         List<MeshFilter> filters = SpatialMappingManager.Instance.GetMeshFilters();
-
         for (int index = 0; index < filters.Count; index++)
         {
             MeshFilter filter = filters[index];
             if (filter != null && filter.sharedMesh != null)
             {
-                Mesh mesh = filter.mesh;
+                Mesh mesh = filter.sharedMesh;
                 mesh.RecalculateBounds();
                 mesh.RecalculateNormals();
                 mesh.RecalculateTangents();
@@ -95,7 +92,7 @@ public class MeshAnalyzer : MonoBehaviour
                     Vector3 vertice = filter.transform.TransformPoint(vertices[i]);
                     Vector3 normal = filter.transform.TransformDirection(normals[i].normalized);
 
-                    categorizeNormal(normal, vertice);
+                    CategorizeNormal(normal, vertice);
                 }
             }
             yield return null;
@@ -105,10 +102,22 @@ public class MeshAnalyzer : MonoBehaviour
 
         yield return null;
 
-        categorizeHorizontals(horizontalNormals);
+        CategorizeHorizontals(horizontalNormals);
+        Line plane = CategorizeHorizontalLines(horizontalNormals);
+        //GameObject planeGameObject = GameObject.CreatePrimitive(PrimitiveType.Plane);
+        //planeGameObject.transform.up = plane.Direction;
+        //planeGameObject.transform.position = plane.Origin;
+        //planeGameObject.transform.localScale = new Vector3(1, 1, 1);
+
+        GameObject cube = GameObject.CreatePrimitive(PrimitiveType.Cube);
+        cube.transform.up = plane.Direction;
+        cube.transform.position = plane.Origin;
+        cube.transform.localScale = new Vector3(10, UPPER_PLANE_LIMIT, 10);
+
+        
     }
 
-    private void categorizeNormal(Vector3 normal, Vector3 origin)
+    private void CategorizeNormal(Vector3 normal, Vector3 origin)
     {
         if (Vector3.Angle(UP, normal) <= UPPER_LIMIT)
         {
@@ -126,11 +135,41 @@ public class MeshAnalyzer : MonoBehaviour
         {
             horizontalNormals.Add(new Line(origin, normal));
             if (drawHorizontalNormals)
-                Debug.DrawRay(origin, normal.normalized * normalsScale, colorHorizontalNormals, drawDuration, true);
+                Debug.DrawRay(origin, normal.normalized * normalsScale, colorHorizontalNormals, drawDuration);
         }
     }
 
-    private void categorizeHorizontals(HashSet<Line> horizontalNormals)
+    private Line CategorizeHorizontalLines(HashSet<Line> horizontalLines)
+    {
+        Line[] lines = new Line[horizontalLines.Count];
+        horizontalLines.CopyTo(lines);
+        Line maxPlane = null;
+        int maxCount = 0;
+
+        for (int i = 0; i < lines.Length; i++)
+        {
+            Line line = lines[i];
+            Plane linePlane = new Plane(line.Direction, line.Origin);
+
+            int count = 0;
+            foreach (Line l in horizontalLines)
+            {
+                if (linePlane.GetDistanceToPoint(l.Origin) <= UPPER_PLANE_LIMIT && Vector3.Angle(line.Direction, l.Direction) <= UPPER_LIMIT)
+                {
+                    count++;
+                }
+            }
+            if (count > maxCount)
+            {
+                maxCount = count;
+                maxPlane = line;
+            }
+        }
+
+        return maxPlane;
+    }
+
+    private void CategorizeHorizontals(HashSet<Line> horizontalNormals)
     {
         Debug.Log("Start horizontals categorization");
         Dictionary<float, Line> orientationMap = new Dictionary<float, Line>();

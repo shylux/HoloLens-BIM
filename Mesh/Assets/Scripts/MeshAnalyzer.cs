@@ -10,8 +10,8 @@ public class MeshAnalyzer : MonoBehaviour
     private static readonly Vector3 DOWN = Vector3.down;
     private static readonly Vector3 UP = Vector3.up;
     private static readonly Vector3 FORWARD = Vector3.forward;
-    private const float UPPER_LIMIT = 5f;
-    private const float UPPER_PLANE_LIMIT = .1f;
+    private const float UPPER_LIMIT = 2f;
+    private const float UPPER_PLANE_LIMIT = .05f;
     private const int UPPER_ANGLE = 20;
 
     public HashSet<Vector3> downNormals = new HashSet<Vector3>();
@@ -19,6 +19,7 @@ public class MeshAnalyzer : MonoBehaviour
     private HashSet<Line> horizontalNormals = new HashSet<Line>();
 
     public float scanTime = 30.0f;
+    public int numberOfPlanesToFind = 4;
 
     [Range(0.0f, 1.0f)]
     public float normalsScale = 1.0f;
@@ -102,36 +103,46 @@ public class MeshAnalyzer : MonoBehaviour
 
         yield return null;
 
-        CategorizeHorizontals(horizontalNormals);
-        Line plane = CategorizeHorizontalLines(horizontalNormals);
-        //GameObject planeGameObject = GameObject.CreatePrimitive(PrimitiveType.Plane);
-        //planeGameObject.transform.up = plane.Direction;
-        //planeGameObject.transform.position = plane.Origin;
-        //planeGameObject.transform.localScale = new Vector3(1, 1, 1);
+        //CategorizeHorizontals(horizontalNormals);
 
-        GameObject cube = GameObject.CreatePrimitive(PrimitiveType.Cube);
-        cube.transform.up = plane.Direction;
-        cube.transform.position = plane.Origin;
-        cube.transform.localScale = new Vector3(10, UPPER_PLANE_LIMIT, 10);
-
-        
+        List<Line> availableLines = new List<Line>(horizontalNormals);
+        for (int i = 0; i < numberOfPlanesToFind; i++)
+        {
+            Debug.Log("Available Lines Count: " + availableLines.Count);
+            List<Line> lines = FindMostPopulatedPlane(availableLines);
+            Debug.Log("Count is " + lines.Count);
+            Line plane = lines[0];
+            GameObject cube = GameObject.CreatePrimitive(PrimitiveType.Cube);
+            cube.name = lines.Count.ToString();
+            cube.transform.up = plane.Direction;
+            cube.transform.position = plane.Origin;
+            cube.transform.localScale = new Vector3(10, UPPER_PLANE_LIMIT, 10);
+            availableLines.RemoveAll(l => lines.Contains(l));
+            if (drawWallNormals)
+            {
+                foreach (Line n in lines)
+                {
+                    Debug.DrawRay(n.Origin, n.Direction.normalized * normalsScale, colorWallNormals, drawDuration, true);
+                }
+            }
+        }
     }
 
     private void CategorizeNormal(Vector3 normal, Vector3 origin)
     {
-        if (Vector3.Angle(UP, normal) <= UPPER_LIMIT)
+        if (AngleInAcceptableRange(UP, normal))
         {
             upNormals.Add(normal);
             if (drawUpNormals)
                 Debug.DrawRay(origin, normal.normalized * normalsScale, colorUpNormals, drawDuration);
         }
-        else if (Vector3.Angle(DOWN, normal) <= UPPER_LIMIT)
+        else if (AngleInAcceptableRange(DOWN, normal))
         {
             downNormals.Add(normal);
             if (drawDownNormals)
                 Debug.DrawRay(origin, normal.normalized * normalsScale, colorDownNormals, drawDuration);
         }
-        else if (Vector3.Angle(new Vector3(normal.x, 0, normal.z), normal) <= UPPER_LIMIT)
+        else if (AngleInAcceptableRange(new Vector3(normal.x, 0, normal.z), normal))
         {
             horizontalNormals.Add(new Line(origin, normal));
             if (drawHorizontalNormals)
@@ -139,7 +150,42 @@ public class MeshAnalyzer : MonoBehaviour
         }
     }
 
-    private Line CategorizeHorizontalLines(HashSet<Line> horizontalLines)
+    private List<Line> FindMostPopulatedPlane(List<Line> availableLines)
+    {
+        List<Line> linesInPlane = new List<Line>();
+
+        Line[] lines = new Line[availableLines.Count];
+        availableLines.CopyTo(lines);
+
+        for (int i = 0; i < lines.Length; i++)
+        {
+            Line line = lines[i];
+            Plane plane = new Plane(line.Direction, line.Origin);
+            List<Line> containedLines = new List<Line>
+            {
+                line
+            };
+
+            foreach (Line l in availableLines)
+            {
+                float distance = Math.Abs(plane.GetDistanceToPoint(l.Origin));
+                if (!l.Equals(line) && distance <= UPPER_PLANE_LIMIT && AngleInAcceptableRange(line.Direction, l.Direction))
+                {
+                    containedLines.Add(l);
+                }
+            }
+
+            if (containedLines.Count > linesInPlane.Count)
+            {
+                linesInPlane = containedLines;
+            }
+        }
+
+
+        return linesInPlane;
+    }
+
+    private Dictionary<int, List<Line>> CategorizeHorizontalLines(HashSet<Line> horizontalLines)
     {
         Line[] lines = new Line[horizontalLines.Count];
         horizontalLines.CopyTo(lines);
@@ -167,6 +213,13 @@ public class MeshAnalyzer : MonoBehaviour
         }
 
         return maxPlane;
+    }
+
+    private bool AngleInAcceptableRange(Vector3 a, Vector3 b)
+    {
+        float angle = Vector3.Angle(a, b);
+
+        return angle <= UPPER_LIMIT || angle >= 180 - UPPER_LIMIT;
     }
 
     private void CategorizeHorizontals(HashSet<Line> horizontalNormals)

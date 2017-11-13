@@ -10,16 +10,18 @@ public class MeshAnalyzer : MonoBehaviour
     private static readonly Vector3 DOWN = Vector3.down;
     private static readonly Vector3 UP = Vector3.up;
     private static readonly Vector3 FORWARD = Vector3.forward;
-    private const float UPPER_LIMIT = 2f;
-    private const float UPPER_PLANE_LIMIT = .05f;
-    private const int UPPER_ANGLE = 20;
+
+    public float scanTime = 30.0f;
+    public int numberOfPlanesToFind = 4;
+
+    [Range(0.0f, 180.0f)]
+    public float maxOrientationDifference = 2f;
+
+    public float maxDistanceToPlane = .05f;
 
     public HashSet<Vector3> downNormals = new HashSet<Vector3>();
     public HashSet<Vector3> upNormals = new HashSet<Vector3>();
     private HashSet<Line> horizontalNormals = new HashSet<Line>();
-
-    public float scanTime = 30.0f;
-    public int numberOfPlanesToFind = 4;
 
     [Range(0.0f, 1.0f)]
     public float normalsScale = 1.0f;
@@ -54,7 +56,6 @@ public class MeshAnalyzer : MonoBehaviour
 
             analyze = true;
             StartCoroutine(AnalyzeRoutine());
-            CategorizeHorizontals(horizontalNormals);
         }
     }
 
@@ -116,7 +117,7 @@ public class MeshAnalyzer : MonoBehaviour
             cube.name = lines.Count.ToString();
             cube.transform.up = plane.Direction;
             cube.transform.position = plane.Origin;
-            cube.transform.localScale = new Vector3(10, UPPER_PLANE_LIMIT, 10);
+            cube.transform.localScale = new Vector3(10, maxDistanceToPlane, 10);
             availableLines.RemoveAll(l => lines.Contains(l));
             if (drawWallNormals)
             {
@@ -130,19 +131,19 @@ public class MeshAnalyzer : MonoBehaviour
 
     private void CategorizeNormal(Vector3 normal, Vector3 origin)
     {
-        if (AngleInAcceptableRange(UP, normal))
+        if (IsOrientationEqual(UP, normal))
         {
             upNormals.Add(normal);
             if (drawUpNormals)
                 Debug.DrawRay(origin, normal.normalized * normalsScale, colorUpNormals, drawDuration);
         }
-        else if (AngleInAcceptableRange(DOWN, normal))
+        else if (IsOrientationEqual(DOWN, normal))
         {
             downNormals.Add(normal);
             if (drawDownNormals)
                 Debug.DrawRay(origin, normal.normalized * normalsScale, colorDownNormals, drawDuration);
         }
-        else if (AngleInAcceptableRange(new Vector3(normal.x, 0, normal.z), normal))
+        else if (IsOrientationEqual(new Vector3(normal.x, 0, normal.z), normal))
         {
             horizontalNormals.Add(new Line(origin, normal));
             if (drawHorizontalNormals)
@@ -168,8 +169,7 @@ public class MeshAnalyzer : MonoBehaviour
 
             foreach (Line l in availableLines)
             {
-                float distance = Math.Abs(plane.GetDistanceToPoint(l.Origin));
-                if (!l.Equals(line) && distance <= UPPER_PLANE_LIMIT && AngleInAcceptableRange(line.Direction, l.Direction))
+                if (!l.Equals(line) && IsPointInPlane(plane, l.Origin) && IsOrientationEqual(line.Direction, l.Direction))
                 {
                     containedLines.Add(l);
                 }
@@ -215,71 +215,16 @@ public class MeshAnalyzer : MonoBehaviour
         return maxPlane;
     }
 
-    private bool AngleInAcceptableRange(Vector3 a, Vector3 b)
+    private bool IsOrientationEqual(Vector3 a, Vector3 b)
     {
         float angle = Vector3.Angle(a, b);
-
-        return angle <= UPPER_LIMIT || angle >= 180 - UPPER_LIMIT;
+        return angle <= maxOrientationDifference || angle >= 180 - maxOrientationDifference;
     }
 
-    private void CategorizeHorizontals(HashSet<Line> horizontalNormals)
+    private bool IsPointInPlane(Plane plane, Vector3 point)
     {
-        Debug.Log("Start horizontals categorization");
-        Dictionary<float, Line> orientationMap = new Dictionary<float, Line>();
-
-        foreach (Line l in horizontalNormals)
-        {
-            Vector3 n = l.Direction;
-            float angle = Vector3.Angle(new Vector3(n.x, 0, n.z), FORWARD);
-            if (!orientationMap.ContainsKey(angle))
-            {
-                orientationMap.Add(angle, l);
-            }
-        }
-
-        int position = 0;
-        HashSet<Line> maxSubset = new HashSet<Line>();
-
-        int thresholdSpace = 4 * UPPER_ANGLE;
-        Debug.Log("thresholdSpace: " + thresholdSpace);
-
-        while (position < 90)
-        {
-            HashSet<Line> subset = new HashSet<Line>();
-            for (int i = 0; i < thresholdSpace; i++)
-            {
-                float index = ((i / UPPER_ANGLE) * 90) + (i % UPPER_ANGLE) + position;
-                float upperBound = (index + 0.5f) % 360;
-                float lowerBound = (index - 0.5f) % 360;
-
-                IEnumerable<KeyValuePair<float, Line>> matches = orientationMap.Where(kvp => kvp.Key < upperBound && kvp.Key >= lowerBound);
-
-                foreach (KeyValuePair<float, Line> m in matches)
-                {
-                    if (!subset.Contains(m.Value))
-                    {
-                        subset.Add(m.Value);
-                    }
-                }
-            }
-
-            Debug.Log("Subset with " + subset.Count + " normals found.");
-            if (subset.Count > maxSubset.Count)
-            {
-                Debug.Log("New max Subset with " + subset.Count + " normals found.");
-                maxSubset = subset;
-            }
-
-            position++;
-        }
-
-        if (drawWallNormals)
-        {
-            foreach (Line n in maxSubset)
-            {
-                Debug.DrawRay(n.Origin, n.Direction.normalized * normalsScale, colorWallNormals, drawDuration, true);
-            }
-        }
+        float distance = Math.Abs(plane.GetDistanceToPoint(point));
+        return distance <= (maxDistanceToPlane / 2);
     }
 
     class Vector3CoordComparer : IEqualityComparer<Vector3>

@@ -42,13 +42,16 @@ public class MeshAnalyzer : Singleton<MeshAnalyzer> {
     private List<List<Line>> foundPlanes = new List<List<Line>>();
 
     private void Update() {
-        if (isAnalysisDone || isMappingDone || ((Time.time - SpatialMappingManager.Instance.StartTime) < scanTime)) {
+        if (isAnalysisDone || isMappingDone || !ScanProgress.Instance.isFinished()) {
             Debug.Log("No mesh analysis for now.");
         }
         else {
-            if (SpatialMappingManager.Instance.IsObserverRunning()) {
+            /*if (SpatialMappingManager.Instance.IsObserverRunning()) {
                 SpatialMappingManager.Instance.StopObserver();
             }
+            We have our own ScanManager. I don't think we should stop him because we might
+            restart with a better mesh. The work of the scan manager is in the HPU so it won't have
+            much inpact on our cpu performance. */
             isMappingDone = true;
             StartCoroutine(AnalyzeRoutine());
         }
@@ -62,7 +65,7 @@ public class MeshAnalyzer : Singleton<MeshAnalyzer> {
     private IEnumerator AnalyzeRoutine() {
         Debug.Log("Start mesh analysis");
 
-        List<MeshFilter> filters = SpatialMappingManager.Instance.GetMeshFilters();
+        List<MeshFilter> filters = ScanManager.Instance.GetMeshFilters();
         for (int index = 0; index < filters.Count; index++) {
             MeshFilter filter = filters[index];
             if (filter != null && filter.sharedMesh != null) {

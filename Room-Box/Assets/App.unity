@@ -360,15 +360,15 @@ MonoBehaviour:
   maxOrientationDifference: 2
   maxDistanceToPlane: 0.05
   normalsScale: 1
-  drawUpNormals: 0
+  drawUpNormals: 1
   colorUpNormals: {r: 1, g: 0, b: 0, a: 1}
-  drawDownNormals: 0
+  drawDownNormals: 1
   colorDownNormals: {r: 0, g: 0, b: 1, a: 1}
-  drawHorizontalNormals: 0
+  drawHorizontalNormals: 1
   colorHorizontalNormals: {r: 0, g: 1, b: 0, a: 1}
-  drawWallNormals: 0
+  drawWallNormals: 1
   colorWallNormals: {r: 1, g: 0.92156863, b: 0.015686275, a: 1}
-  displayFoundPlanes: 0
+  displayFoundPlanes: 1
 --- !u!4 &1140961369
 Transform:
   m_ObjectHideFlags: 0

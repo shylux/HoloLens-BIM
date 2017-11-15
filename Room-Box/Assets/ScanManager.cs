@@ -41,7 +41,7 @@ public class SurfaceEntry {
     }
 }
 
-public class ScanManager : MonoBehaviour {
+public class ScanManager : Singleton<ScanManager> {
 
     private SurfaceObserver observer;
     public Dictionary<int, SurfaceEntry> surfaces = new Dictionary<int, SurfaceEntry>();
@@ -150,7 +150,18 @@ public class ScanManager : MonoBehaviour {
                 mc.sharedMesh = surfaceEntry.gameObject.GetComponent<MeshFilter>().sharedMesh;
             }
 
-            OnMeshUpdate(this, new EventArgs());
+            if (OnMeshUpdate != null)
+                OnMeshUpdate(this, new EventArgs());
         }
+    }
+
+    public List<MeshFilter> GetMeshFilters() {
+        List<MeshFilter> renderers = new List<MeshFilter>();
+
+        foreach (SurfaceEntry surfaceEntry in surfaces.Values) {
+            renderers.Add(surfaceEntry.gameObject.GetComponent<MeshFilter>());
+        }
+
+        return renderers;
     }
 }

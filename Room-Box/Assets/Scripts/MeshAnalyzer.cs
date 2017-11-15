@@ -1,5 +1,4 @@
 ﻿using HoloToolkit.Unity;
-using HoloToolkit.Unity.SpatialMapping;
 using System;
 using System.Collections;
 using System.Collections.Generic;
@@ -14,7 +13,6 @@ public class MeshAnalyzer : Singleton<MeshAnalyzer>
     private HashSet<Line> upNormals = new HashSet<Line>();
     private HashSet<Line> horizontalNormals = new HashSet<Line>();
 
-    public float scanTime = 30.0f;
     public int numberOfPlanesToFind = 4;
 
     [Range(0.0f, 180.0f)]
@@ -44,16 +42,18 @@ public class MeshAnalyzer : Singleton<MeshAnalyzer>
 
     private void Update()
     {
-        if (isAnalysisDone || isMappingDone || ((Time.time - SpatialMappingManager.Instance.StartTime) < scanTime))
+        if (isAnalysisDone || isMappingDone || !ScanProgress.Instance.isFinished())
         {
             Debug.Log("No mesh analysis for now.");
         }
         else
         {
-            if (SpatialMappingManager.Instance.IsObserverRunning())
-            {
+            /*if (SpatialMappingManager.Instance.IsObserverRunning()) {
                 SpatialMappingManager.Instance.StopObserver();
             }
+            We have our own ScanManager. I don't think we should stop him because we might
+            restart with a better mesh. The work of the scan manager is in the HPU so it won't have
+            much inpact on our cpu performance. */
             isMappingDone = true;
             StartCoroutine(AnalyzeRoutine());
         }
@@ -69,7 +69,7 @@ public class MeshAnalyzer : Singleton<MeshAnalyzer>
     {
         Debug.Log("Start mesh analysis");
 
-        List<MeshFilter> filters = SpatialMappingManager.Instance.GetMeshFilters();
+        List<MeshFilter> filters = ScanManager.Instance.GetMeshFilters();
         for (int index = 0; index < filters.Count; index++)
         {
             MeshFilter filter = filters[index];

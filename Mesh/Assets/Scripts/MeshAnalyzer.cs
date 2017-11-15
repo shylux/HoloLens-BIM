@@ -1,11 +1,11 @@
-﻿using HoloToolkit.Unity.SpatialMapping;
+﻿using HoloToolkit.Unity;
+using HoloToolkit.Unity.SpatialMapping;
 using System;
 using System.Collections;
 using System.Collections.Generic;
-using System.Linq;
 using UnityEngine;
 
-public class MeshAnalyzer : MonoBehaviour
+public class MeshAnalyzer : Singleton<MeshAnalyzer>
 {
     private static readonly Vector3 DOWN = Vector3.down;
     private static readonly Vector3 UP = Vector3.up;
@@ -33,17 +33,19 @@ public class MeshAnalyzer : MonoBehaviour
     public Color colorHorizontalNormals = Color.green;
     public bool drawWallNormals = false;
     public Color colorWallNormals = Color.yellow;
+    public bool displayFoundPlanes = false;
 
     private float drawDuration = 300f;
 
-    private bool analyze = false;
+    private bool isMappingDone = false;
+    private bool isAnalysisDone = false;
 
-    // Update is called once per frame
+    private List<List<Line>> foundPlanes = new List<List<Line>>();
+
     private void Update()
     {
-        if (analyze || ((Time.time - SpatialMappingManager.Instance.StartTime) < scanTime))
+        if (isAnalysisDone || isMappingDone || ((Time.time - SpatialMappingManager.Instance.StartTime) < scanTime))
         {
-            // Wait until enough time has passed before processing the mesh.
             Debug.Log("No mesh analysis for now.");
         }
         else
@@ -52,9 +54,14 @@ public class MeshAnalyzer : MonoBehaviour
             {
                 SpatialMappingManager.Instance.StopObserver();
             }
-
-            analyze = true;
+            isMappingDone = true;
             StartCoroutine(AnalyzeRoutine());
+        }
+
+        if (displayFoundPlanes && isAnalysisDone)
+        {
+            DisplayFoundPlanes();
+            displayFoundPlanes = false;
         }
     }
 
@@ -85,8 +92,10 @@ public class MeshAnalyzer : MonoBehaviour
                     Vector3 center = (v0 + v1 + v2) / 3;
                     Vector3 dir = Vector3.Normalize(Vector3.Cross(v1 - v0, v2 - v0));
 
-                    //categorizeNormal(dir, center);
+                    //CategorizeNormal(dir, center);
                 }
+
+                yield return null;
 
                 for (int i = 0; i < vertices.Length; i++)
                 {
@@ -106,6 +115,8 @@ public class MeshAnalyzer : MonoBehaviour
         FindPlanesFromNormals(horizontalNormals, numberOfPlanesToFind);
 
         yield return null;
+
+        isAnalysisDone = true;
     }
 
     private void CategorizeNormal(Vector3 normal, Vector3 origin)
@@ -133,11 +144,28 @@ public class MeshAnalyzer : MonoBehaviour
     private void FindPlanesFromNormals(IEnumerable<Line> normals, int numberOfPlanes)
     {
         List<Line> availableLines = new List<Line>(normals);
-        GameObject container = new GameObject("FoundPlanes");
-
         for (int i = 0; i < numberOfPlanes; i++)
         {
             List<Line> lines = FindMostPopulatedPlane(availableLines);
+            foundPlanes.Add(lines);
+
+            // Remove used lines
+            availableLines.RemoveAll(l => lines.Contains(l));
+        }
+    }
+
+    public void DisplayFoundPlanes()
+    {
+        if (!IsAnalysisDone())
+        {
+            Debug.LogWarning("Planes can't be displayed before analysis is done");
+            return;
+        }
+
+        GameObject container = new GameObject("FoundPlanes");
+        for (int i = 0; i < foundPlanes.Count; i++)
+        {
+            List<Line> lines = foundPlanes[i];
             Line planeLine = lines[0];
 
             // Create a cube as representation of the found plane.
@@ -147,9 +175,6 @@ public class MeshAnalyzer : MonoBehaviour
             cube.transform.position = planeLine.Origin;
             cube.transform.localScale = new Vector3(10, maxDistanceToPlane, 10);
             cube.transform.parent = container.transform;
-
-            // Remove used lines
-            availableLines.RemoveAll(l => lines.Contains(l));
 
             // Debug
             if (drawWallNormals)
@@ -195,13 +220,39 @@ public class MeshAnalyzer : MonoBehaviour
     private bool IsOrientationEqual(Vector3 a, Vector3 b)
     {
         float angle = Vector3.Angle(a, b);
-        return angle <= maxOrientationDifference || angle >= 180 - maxOrientationDifference;
+        return angle <= maxOrientationDifference /*|| angle >= 180 - maxOrientationDifference*/;
     }
 
     private bool IsPointInPlane(Plane plane, Vector3 point)
     {
         float distance = Math.Abs(plane.GetDistanceToPoint(point));
         return distance <= (maxDistanceToPlane / 2);
+    }
+
+    //// <summary>
+    //// To be removed later!
+    //// </summary>
+    public bool IsMappingRunning()
+    {
+        return !isMappingDone && !isAnalysisDone;
+    }
+
+    public bool IsAnalysisRunning()
+    {
+        return isMappingDone && !isAnalysisDone;
+    }
+
+    public bool IsAnalysisDone()
+    {
+        return isAnalysisDone;
+    }
+
+    public List<List<Line>> FoundPlanes
+    {
+        get
+        {
+            return foundPlanes;
+        }
     }
 
     class Vector3CoordComparer : IEqualityComparer<Vector3>
@@ -224,7 +275,7 @@ public class MeshAnalyzer : MonoBehaviour
         }
     }
 
-    class Line
+    public class Line
     {
         private Vector3 origin;
         private Vector3 direction;

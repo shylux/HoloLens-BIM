@@ -38,7 +38,7 @@ RenderSettings:
   m_ReflectionIntensity: 1
   m_CustomReflection: {fileID: 0}
   m_Sun: {fileID: 0}
-  m_IndirectSpecularColor: {r: 0.37311992, g: 0.38074034, b: 0.35872713, a: 1}
+  m_IndirectSpecularColor: {r: 0.37311918, g: 0.3807398, b: 0.35872716, a: 1}
 --- !u!157 &3
 LightmapSettings:
   m_ObjectHideFlags: 0
@@ -352,7 +352,7 @@ MonoBehaviour:
   m_GameObject: {fileID: 1140961367}
   m_Enabled: 1
   m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 0dc9db6e076226a47b76d47e7c3bc284, type: 3}
+  m_Script: {fileID: 11500000, guid: 18425f30009aec04db0c33668541f3c3, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
   scanTime: 30
@@ -360,11 +360,11 @@ MonoBehaviour:
   maxOrientationDifference: 2
   maxDistanceToPlane: 0.05
   normalsScale: 1
-  drawUpNormals: 1
+  drawUpNormals: 0
   colorUpNormals: {r: 1, g: 0, b: 0, a: 1}
-  drawDownNormals: 1
+  drawDownNormals: 0
   colorDownNormals: {r: 0, g: 0, b: 1, a: 1}
-  drawHorizontalNormals: 1
+  drawHorizontalNormals: 0
   colorHorizontalNormals: {r: 0, g: 1, b: 0, a: 1}
   drawWallNormals: 1
   colorWallNormals: {r: 1, g: 0.92156863, b: 0.015686275, a: 1}

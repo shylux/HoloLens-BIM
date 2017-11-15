@@ -9,7 +9,10 @@ public class MeshAnalyzer : MonoBehaviour
 {
     private static readonly Vector3 DOWN = Vector3.down;
     private static readonly Vector3 UP = Vector3.up;
-    private static readonly Vector3 FORWARD = Vector3.forward;
+
+    private HashSet<Line> downNormals = new HashSet<Line>();
+    private HashSet<Line> upNormals = new HashSet<Line>();
+    private HashSet<Line> horizontalNormals = new HashSet<Line>();
 
     public float scanTime = 30.0f;
     public int numberOfPlanesToFind = 4;
@@ -18,10 +21,6 @@ public class MeshAnalyzer : MonoBehaviour
     public float maxOrientationDifference = 2f;
 
     public float maxDistanceToPlane = .05f;
-
-    public HashSet<Vector3> downNormals = new HashSet<Vector3>();
-    public HashSet<Vector3> upNormals = new HashSet<Vector3>();
-    private HashSet<Line> horizontalNormals = new HashSet<Line>();
 
     [Range(0.0f, 1.0f)]
     public float normalsScale = 1.0f;
@@ -104,42 +103,22 @@ public class MeshAnalyzer : MonoBehaviour
 
         yield return null;
 
-        //CategorizeHorizontals(horizontalNormals);
+        FindPlanesFromNormals(horizontalNormals, numberOfPlanesToFind);
 
-        List<Line> availableLines = new List<Line>(horizontalNormals);
-        for (int i = 0; i < numberOfPlanesToFind; i++)
-        {
-            Debug.Log("Available Lines Count: " + availableLines.Count);
-            List<Line> lines = FindMostPopulatedPlane(availableLines);
-            Debug.Log("Count is " + lines.Count);
-            Line plane = lines[0];
-            GameObject cube = GameObject.CreatePrimitive(PrimitiveType.Cube);
-            cube.name = lines.Count.ToString();
-            cube.transform.up = plane.Direction;
-            cube.transform.position = plane.Origin;
-            cube.transform.localScale = new Vector3(10, maxDistanceToPlane, 10);
-            availableLines.RemoveAll(l => lines.Contains(l));
-            if (drawWallNormals)
-            {
-                foreach (Line n in lines)
-                {
-                    Debug.DrawRay(n.Origin, n.Direction.normalized * normalsScale, colorWallNormals, drawDuration, true);
-                }
-            }
-        }
+        yield return null;
     }
 
     private void CategorizeNormal(Vector3 normal, Vector3 origin)
     {
         if (IsOrientationEqual(UP, normal))
         {
-            upNormals.Add(normal);
+            upNormals.Add(new Line(origin, normal));
             if (drawUpNormals)
                 Debug.DrawRay(origin, normal.normalized * normalsScale, colorUpNormals, drawDuration);
         }
         else if (IsOrientationEqual(DOWN, normal))
         {
-            downNormals.Add(normal);
+            downNormals.Add(new Line(origin, normal));
             if (drawDownNormals)
                 Debug.DrawRay(origin, normal.normalized * normalsScale, colorDownNormals, drawDuration);
         }
@@ -151,16 +130,44 @@ public class MeshAnalyzer : MonoBehaviour
         }
     }
 
-    private List<Line> FindMostPopulatedPlane(List<Line> availableLines)
+    private void FindPlanesFromNormals(IEnumerable<Line> normals, int numberOfPlanes)
+    {
+        List<Line> availableLines = new List<Line>(normals);
+        GameObject container = new GameObject("FoundPlanes");
+
+        for (int i = 0; i < numberOfPlanes; i++)
+        {
+            List<Line> lines = FindMostPopulatedPlane(availableLines);
+            Line planeLine = lines[0];
+
+            // Create a cube as representation of the found plane.
+            GameObject cube = GameObject.CreatePrimitive(PrimitiveType.Cube);
+            cube.name = "Plane #" + i + " (" + lines.Count.ToString() + " normals)";
+            cube.transform.up = planeLine.Direction;
+            cube.transform.position = planeLine.Origin;
+            cube.transform.localScale = new Vector3(10, maxDistanceToPlane, 10);
+            cube.transform.parent = container.transform;
+
+            // Remove used lines
+            availableLines.RemoveAll(l => lines.Contains(l));
+
+            // Debug
+            if (drawWallNormals)
+            {
+                foreach (Line n in lines)
+                {
+                    Debug.DrawRay(n.Origin, n.Direction.normalized * normalsScale, colorWallNormals, drawDuration, true);
+                }
+            }
+        }
+    }
+
+    private List<Line> FindMostPopulatedPlane(IEnumerable<Line> availableLines)
     {
         List<Line> linesInPlane = new List<Line>();
 
-        Line[] lines = new Line[availableLines.Count];
-        availableLines.CopyTo(lines);
-
-        for (int i = 0; i < lines.Length; i++)
+        foreach (Line line in availableLines)
         {
-            Line line = lines[i];
             Plane plane = new Plane(line.Direction, line.Origin);
             List<Line> containedLines = new List<Line>
             {
@@ -169,7 +176,7 @@ public class MeshAnalyzer : MonoBehaviour
 
             foreach (Line l in availableLines)
             {
-                if (!l.Equals(line) && IsPointInPlane(plane, l.Origin) && IsOrientationEqual(line.Direction, l.Direction))
+                if (!containedLines.Contains(l) && IsPointInPlane(plane, l.Origin) && IsOrientationEqual(line.Direction, l.Direction))
                 {
                     containedLines.Add(l);
                 }
@@ -183,36 +190,6 @@ public class MeshAnalyzer : MonoBehaviour
 
 
         return linesInPlane;
-    }
-
-    private Dictionary<int, List<Line>> CategorizeHorizontalLines(HashSet<Line> horizontalLines)
-    {
-        Line[] lines = new Line[horizontalLines.Count];
-        horizontalLines.CopyTo(lines);
-        Line maxPlane = null;
-        int maxCount = 0;
-
-        for (int i = 0; i < lines.Length; i++)
-        {
-            Line line = lines[i];
-            Plane linePlane = new Plane(line.Direction, line.Origin);
-
-            int count = 0;
-            foreach (Line l in horizontalLines)
-            {
-                if (linePlane.GetDistanceToPoint(l.Origin) <= UPPER_PLANE_LIMIT && Vector3.Angle(line.Direction, l.Direction) <= UPPER_LIMIT)
-                {
-                    count++;
-                }
-            }
-            if (count > maxCount)
-            {
-                maxCount = count;
-                maxPlane = line;
-            }
-        }
-
-        return maxPlane;
     }
 
     private bool IsOrientationEqual(Vector3 a, Vector3 b)

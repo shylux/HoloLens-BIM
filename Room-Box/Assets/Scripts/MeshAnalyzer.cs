@@ -220,25 +220,13 @@ public class MeshAnalyzer : Singleton<MeshAnalyzer> {
         }
     }
 
-    public class Line {
-        private Vector3 origin;
-        private Vector3 direction;
+    public struct Line {
+        public Vector3 Origin { get; private set; }
+        public Vector3 Direction { get; private set; }
 
         public Line(Vector3 origin, Vector3 direction) {
-            this.origin = origin;
-            this.direction = direction;
-        }
-
-        public Vector3 Origin {
-            get {
-                return origin;
-            }
-        }
-
-        public Vector3 Direction {
-            get {
-                return direction;
-            }
+            Origin = origin;
+            Direction = direction;
         }
     }
 

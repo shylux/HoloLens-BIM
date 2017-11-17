@@ -95,8 +95,6 @@ public class MeshAnalyzer : Singleton<MeshAnalyzer>
                     Vector3 v2 = filter.transform.TransformPoint(vertices[triangles[i + 2]]);
                     Vector3 center = (v0 + v1 + v2) / 3;
                     Vector3 dir = Vector3.Normalize(Vector3.Cross(v1 - v0, v2 - v0));
-
-                    //CategorizeNormal(dir, center);
                 }
 
                 yield return null;
@@ -147,17 +145,6 @@ public class MeshAnalyzer : Singleton<MeshAnalyzer>
 
     private void FindPlanesFromNormals(IEnumerable<Line> normals, int numberOfPlanes)
     {
-        /*
-        List<Line> availableLines = new List<Line>(normals);
-        for (int i = 0; i < numberOfPlanes; i++)
-        {
-            List<Line> lines = FindMostPopulatedPlane(availableLines);
-            foundPlanes.Add(lines);
-
-            // Remove used lines
-            availableLines.RemoveAll(l => lines.Contains(l));
-        }
-        */
         List<Plane> planes = FindMostPopulatedPlanes(normals);
         for (int i = 0; i < numberOfPlanes; i++) {
             foundPlanes.Add(planes[i].Lines);
@@ -191,36 +178,6 @@ public class MeshAnalyzer : Singleton<MeshAnalyzer>
         }
     }
 
-    private List<Line> FindMostPopulatedPlane(IEnumerable<Line> availableLines)
-    {
-        List<Line> linesInPlane = new List<Line>();
-
-        foreach (Line line in availableLines)
-        {
-            UnityEngine.Plane plane = new UnityEngine.Plane(line.Direction, line.Origin);
-            List<Line> containedLines = new List<Line>
-            {
-                line
-            };
-
-            foreach (Line l in availableLines)
-            {
-                if (!containedLines.Contains(l) && IsPointInPlane(plane, l.Origin) && IsOrientationEqual(line.Direction, l.Direction))
-                {
-                    containedLines.Add(l);
-                }
-            }
-
-            if (containedLines.Count > linesInPlane.Count)
-            {
-                linesInPlane = containedLines;
-            }
-        }
-
-
-        return linesInPlane;
-    }
-
     private List<Plane> FindMostPopulatedPlanes(IEnumerable<Line> availableLines) {
         List<Plane> planes = new List<Plane>();
         foreach (Line line in availableLines) {
@@ -241,7 +198,13 @@ public class MeshAnalyzer : Singleton<MeshAnalyzer>
             }
         }
 
+        // sorts by line count
         planes.Sort();
+
+        // merge similar planes
+        List<Plane> mergedPlanes = new List<Plane>();
+        foreach (Plane plane in planes) {
+        }
 
         return planes;
     }
@@ -249,31 +212,7 @@ public class MeshAnalyzer : Singleton<MeshAnalyzer>
     private bool IsOrientationEqual(Vector3 a, Vector3 b)
     {
         float angle = Vector3.Angle(a, b);
-        return angle <= maxOrientationDifference /*|| angle >= 180 - maxOrientationDifference*/;
-    }
-
-    private bool IsPointInPlane(UnityEngine.Plane plane, Vector3 point)
-    {
-        float distance = Math.Abs(plane.GetDistanceToPoint(point));
-        return distance <= (maxDistanceToPlane / 2);
-    }
-
-    //// <summary>
-    //// To be removed later!
-    //// </summary>
-    public bool IsMappingRunning()
-    {
-        return !isMappingDone && !isAnalysisDone;
-    }
-
-    public bool IsAnalysisRunning()
-    {
-        return isMappingDone && !isAnalysisDone;
-    }
-
-    public bool IsAnalysisDone()
-    {
-        return isAnalysisDone;
+        return angle <= maxOrientationDifference;
     }
 
     public List<List<Line>> FoundPlanes
@@ -351,7 +290,7 @@ public class MeshAnalyzer : Singleton<MeshAnalyzer>
             // check the angle between plane normal and line direction
             if (Vector3.Angle(l.Direction, normal) > maxOrientationDifference) return false;
             // check distance between plane and line origin
-            //if (Vector3.Distance(Vector3.ProjectOnPlane(l.Origin, normal), origin) > maxDistanceToPlane) return false;
+            //if (Vector3.Distance(Vector3.ProjectOnPlane(l.Origin, normal)+origin, l.Origin) > maxDistanceToPlane) return false;
             return true;
         }
 

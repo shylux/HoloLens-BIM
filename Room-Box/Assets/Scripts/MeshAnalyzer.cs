@@ -6,6 +6,21 @@ using UnityEngine;
 
 public class MeshAnalyzer : Singleton<MeshAnalyzer>
 {
+    // MeshAnalyzer states
+    public enum State {
+        Inactive,
+        InProgress,
+        Finished
+    }
+    private State _state = State.Inactive;
+    public State state {
+        get { return _state; }
+        set {
+            _state = value;
+            Debug.Log("MeshAnalyzer switches state to: " + value.ToString());
+        }
+    }
+
     private static readonly Vector3 DOWN = Vector3.down;
     private static readonly Vector3 UP = Vector3.up;
 
@@ -16,9 +31,9 @@ public class MeshAnalyzer : Singleton<MeshAnalyzer>
     public int numberOfPlanesToFind = 4;
 
     [Range(0.0f, 180.0f)]
-    public float maxOrientationDifference = 2f;
+    public static float maxOrientationDifference = 2f;
 
-    public float maxDistanceToPlane = .05f;
+    public static float maxDistanceToPlane = .05f;
 
     [Range(0.0f, 1.0f)]
     public float normalsScale = 1.0f;
@@ -42,23 +57,12 @@ public class MeshAnalyzer : Singleton<MeshAnalyzer>
 
     private void Update()
     {
-        if (isAnalysisDone || isMappingDone || !ScanProgress.Instance.isFinished())
-        {
-            Debug.Log("No mesh analysis for now.");
-        }
-        else
-        {
-            /*if (SpatialMappingManager.Instance.IsObserverRunning()) {
-                SpatialMappingManager.Instance.StopObserver();
-            }
-            We have our own ScanManager. I don't think we should stop him because we might
-            restart with a better mesh. The work of the scan manager is in the HPU so it won't have
-            much inpact on our cpu performance. */
-            isMappingDone = true;
+        if (state == State.Inactive && ScanProgress.Instance.isFinished()) {
+            state = State.InProgress;
             StartCoroutine(AnalyzeRoutine());
         }
 
-        if (displayFoundPlanes && isAnalysisDone)
+        if (displayFoundPlanes && state == State.Finished)
         {
             DisplayFoundPlanes();
             displayFoundPlanes = false;
@@ -91,8 +95,6 @@ public class MeshAnalyzer : Singleton<MeshAnalyzer>
                     Vector3 v2 = filter.transform.TransformPoint(vertices[triangles[i + 2]]);
                     Vector3 center = (v0 + v1 + v2) / 3;
                     Vector3 dir = Vector3.Normalize(Vector3.Cross(v1 - v0, v2 - v0));
-
-                    //CategorizeNormal(dir, center);
                 }
 
                 yield return null;
@@ -116,7 +118,7 @@ public class MeshAnalyzer : Singleton<MeshAnalyzer>
 
         yield return null;
 
-        isAnalysisDone = true;
+        state = State.Finished;
     }
 
     private void CategorizeNormal(Vector3 normal, Vector3 origin)
@@ -143,25 +145,14 @@ public class MeshAnalyzer : Singleton<MeshAnalyzer>
 
     private void FindPlanesFromNormals(IEnumerable<Line> normals, int numberOfPlanes)
     {
-        List<Line> availableLines = new List<Line>(normals);
-        for (int i = 0; i < numberOfPlanes; i++)
-        {
-            List<Line> lines = FindMostPopulatedPlane(availableLines);
-            foundPlanes.Add(lines);
-
-            // Remove used lines
-            availableLines.RemoveAll(l => lines.Contains(l));
+        List<Plane> planes = FindMostPopulatedPlanes(normals);
+        for (int i = 0; i < numberOfPlanes; i++) {
+            foundPlanes.Add(planes[i].Lines);
         }
     }
 
     public void DisplayFoundPlanes()
     {
-        if (!IsAnalysisDone())
-        {
-            Debug.LogWarning("Planes can't be displayed before analysis is done");
-            return;
-        }
-
         GameObject container = new GameObject("FoundPlanes");
         for (int i = 0; i < foundPlanes.Count; i++)
         {
@@ -187,64 +178,41 @@ public class MeshAnalyzer : Singleton<MeshAnalyzer>
         }
     }
 
-    private List<Line> FindMostPopulatedPlane(IEnumerable<Line> availableLines)
-    {
-        List<Line> linesInPlane = new List<Line>();
+    private List<Plane> FindMostPopulatedPlanes(IEnumerable<Line> availableLines) {
+        List<Plane> planes = new List<Plane>();
+        foreach (Line line in availableLines) {
+            bool matchingPlaneFound = false;
 
-        foreach (Line line in availableLines)
-        {
-            Plane plane = new Plane(line.Direction, line.Origin);
-            List<Line> containedLines = new List<Line>
-            {
-                line
-            };
-
-            foreach (Line l in availableLines)
-            {
-                if (!containedLines.Contains(l) && IsPointInPlane(plane, l.Origin) && IsOrientationEqual(line.Direction, l.Direction))
-                {
-                    containedLines.Add(l);
+            // check planes if there is one that fits the line
+            foreach (Plane plane in planes) {
+                if (plane.IsLineOnPlane(line)) {
+                    plane.AddLine(line);
+                    matchingPlaneFound = true;
+                    break;
                 }
             }
 
-            if (containedLines.Count > linesInPlane.Count)
-            {
-                linesInPlane = containedLines;
+            // add a new plane if no matching plane was found
+            if (!matchingPlaneFound) {
+                planes.Add(new Plane(line.Origin, line.Direction));
             }
         }
 
+        // sorts by line count
+        planes.Sort();
 
-        return linesInPlane;
+        // merge similar planes
+        List<Plane> mergedPlanes = new List<Plane>();
+        foreach (Plane plane in planes) {
+        }
+
+        return planes;
     }
 
     private bool IsOrientationEqual(Vector3 a, Vector3 b)
     {
         float angle = Vector3.Angle(a, b);
-        return angle <= maxOrientationDifference /*|| angle >= 180 - maxOrientationDifference*/;
-    }
-
-    private bool IsPointInPlane(Plane plane, Vector3 point)
-    {
-        float distance = Math.Abs(plane.GetDistanceToPoint(point));
-        return distance <= (maxDistanceToPlane / 2);
-    }
-
-    //// <summary>
-    //// To be removed later!
-    //// </summary>
-    public bool IsMappingRunning()
-    {
-        return !isMappingDone && !isAnalysisDone;
-    }
-
-    public bool IsAnalysisRunning()
-    {
-        return isMappingDone && !isAnalysisDone;
-    }
-
-    public bool IsAnalysisDone()
-    {
-        return isAnalysisDone;
+        return angle <= maxOrientationDifference;
     }
 
     public List<List<Line>> FoundPlanes
@@ -300,6 +268,50 @@ public class MeshAnalyzer : Singleton<MeshAnalyzer>
             {
                 return direction;
             }
+        }
+    }
+
+    public class Plane: IComparable<Plane> {
+        // The lines that define the plane
+        private List<Line> lines = new List<Line>();
+
+        // origin and normal are continously updated to avoid
+        // going through all lines to recalculate them
+        private Vector3 origin;
+        private Vector3 normal;
+
+        public Plane(Vector3 origin, Vector3 normal) {
+            this.origin = origin;
+            this.normal = normal;
+            lines.Add(new Line(origin, normal));
+        }
+
+        public bool IsLineOnPlane(Line l) {
+            // check the angle between plane normal and line direction
+            if (Vector3.Angle(l.Direction, normal) > maxOrientationDifference) return false;
+            // check distance between plane and line origin
+            //if (Vector3.Distance(Vector3.ProjectOnPlane(l.Origin, normal)+origin, l.Origin) > maxDistanceToPlane) return false;
+            return true;
+        }
+
+        public void AddLine(Line l) {
+            lines.Add(l);
+            this.origin += (l.Origin - this.origin) / lines.Count;
+            this.normal += (l.Direction - this.normal) / lines.Count;
+        }
+
+        public int CompareTo(Plane otherPlane) {
+            return -this.lines.Count.CompareTo(otherPlane.Lines.Count);
+        }
+
+        public Vector3 Origin {
+            get { return this.origin; }
+        }
+        public Vector3 Normal {
+            get { return this.normal; }
+        }
+        public List<Line> Lines {
+            get { return this.lines; }
         }
     }
 }

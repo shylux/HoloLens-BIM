@@ -4,8 +4,7 @@ using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
 
-public class MeshAnalyzer : Singleton<MeshAnalyzer>
-{
+public class MeshAnalyzer : Singleton<MeshAnalyzer> {
     // MeshAnalyzer states
     public enum State {
         Inactive,
@@ -55,30 +54,25 @@ public class MeshAnalyzer : Singleton<MeshAnalyzer>
 
     private List<List<Line>> foundPlanes = new List<List<Line>>();
 
-    private void Update()
-    {
+    private void Update() {
         if (state == State.Inactive && ScanProgress.Instance.isFinished()) {
             state = State.InProgress;
             StartCoroutine(AnalyzeRoutine());
         }
 
-        if (displayFoundPlanes && state == State.Finished)
-        {
+        if (displayFoundPlanes && state == State.Finished) {
             DisplayFoundPlanes();
             displayFoundPlanes = false;
         }
     }
 
-    private IEnumerator AnalyzeRoutine()
-    {
+    private IEnumerator AnalyzeRoutine() {
         Debug.Log("Start mesh analysis");
 
         List<MeshFilter> filters = ScanManager.Instance.GetMeshFilters();
-        for (int index = 0; index < filters.Count; index++)
-        {
+        for (int index = 0; index < filters.Count; index++) {
             MeshFilter filter = filters[index];
-            if (filter != null && filter.sharedMesh != null)
-            {
+            if (filter != null && filter.sharedMesh != null) {
                 Mesh mesh = filter.sharedMesh;
                 mesh.RecalculateBounds();
                 mesh.RecalculateNormals();
@@ -88,8 +82,7 @@ public class MeshAnalyzer : Singleton<MeshAnalyzer>
                 Vector3[] vertices = mesh.vertices;
                 Vector3[] normals = mesh.normals;
 
-                for (int i = 0; i < triangles.Length; i += 3)
-                {
+                for (int i = 0; i < triangles.Length; i += 3) {
                     Vector3 v0 = filter.transform.TransformPoint(vertices[triangles[i]]);
                     Vector3 v1 = filter.transform.TransformPoint(vertices[triangles[i + 1]]);
                     Vector3 v2 = filter.transform.TransformPoint(vertices[triangles[i + 2]]);
@@ -99,8 +92,7 @@ public class MeshAnalyzer : Singleton<MeshAnalyzer>
 
                 yield return null;
 
-                for (int i = 0; i < vertices.Length; i++)
-                {
+                for (int i = 0; i < vertices.Length; i++) {
                     Vector3 vertice = filter.transform.TransformPoint(vertices[i]);
                     Vector3 normal = filter.transform.TransformDirection(normals[i].normalized);
 
@@ -121,41 +113,34 @@ public class MeshAnalyzer : Singleton<MeshAnalyzer>
         state = State.Finished;
     }
 
-    private void CategorizeNormal(Vector3 normal, Vector3 origin)
-    {
-        if (IsOrientationEqual(UP, normal))
-        {
+    private void CategorizeNormal(Vector3 normal, Vector3 origin) {
+        if (IsOrientationEqual(UP, normal)) {
             upNormals.Add(new Line(origin, normal));
             if (drawUpNormals)
                 Debug.DrawRay(origin, normal.normalized * normalsScale, colorUpNormals, drawDuration);
         }
-        else if (IsOrientationEqual(DOWN, normal))
-        {
+        else if (IsOrientationEqual(DOWN, normal)) {
             downNormals.Add(new Line(origin, normal));
             if (drawDownNormals)
                 Debug.DrawRay(origin, normal.normalized * normalsScale, colorDownNormals, drawDuration);
         }
-        else if (IsOrientationEqual(new Vector3(normal.x, 0, normal.z), normal))
-        {
+        else if (IsOrientationEqual(new Vector3(normal.x, 0, normal.z), normal)) {
             horizontalNormals.Add(new Line(origin, normal));
             if (drawHorizontalNormals)
                 Debug.DrawRay(origin, normal.normalized * normalsScale, colorHorizontalNormals, drawDuration);
         }
     }
 
-    private void FindPlanesFromNormals(IEnumerable<Line> normals, int numberOfPlanes)
-    {
+    private void FindPlanesFromNormals(IEnumerable<Line> normals, int numberOfPlanes) {
         List<Plane> planes = FindMostPopulatedPlanes(normals);
         for (int i = 0; i < numberOfPlanes; i++) {
             foundPlanes.Add(planes[i].Lines);
         }
     }
 
-    public void DisplayFoundPlanes()
-    {
+    public void DisplayFoundPlanes() {
         GameObject container = new GameObject("FoundPlanes");
-        for (int i = 0; i < foundPlanes.Count; i++)
-        {
+        for (int i = 0; i < foundPlanes.Count; i++) {
             List<Line> lines = foundPlanes[i];
             Line planeLine = lines[0];
 
@@ -168,10 +153,8 @@ public class MeshAnalyzer : Singleton<MeshAnalyzer>
             cube.transform.parent = container.transform;
 
             // Debug
-            if (drawWallNormals)
-            {
-                foreach (Line n in lines)
-                {
+            if (drawWallNormals) {
+                foreach (Line n in lines) {
                     Debug.DrawRay(n.Origin, n.Direction.normalized * normalsScale, colorWallNormals, drawDuration, true);
                 }
             }
@@ -209,24 +192,19 @@ public class MeshAnalyzer : Singleton<MeshAnalyzer>
         return planes;
     }
 
-    private bool IsOrientationEqual(Vector3 a, Vector3 b)
-    {
+    private bool IsOrientationEqual(Vector3 a, Vector3 b) {
         float angle = Vector3.Angle(a, b);
         return angle <= maxOrientationDifference;
     }
 
-    public List<List<Line>> FoundPlanes
-    {
-        get
-        {
+    public List<List<Line>> FoundPlanes {
+        get {
             return foundPlanes;
         }
     }
 
-    class Vector3CoordComparer : IEqualityComparer<Vector3>
-    {
-        public bool Equals(Vector3 a, Vector3 b)
-        {
+    class Vector3CoordComparer : IEqualityComparer<Vector3> {
+        public bool Equals(Vector3 a, Vector3 b) {
             if (Mathf.Abs(a.x - b.x) > 0.1) return false;
             if (Mathf.Abs(a.y - b.y) > 0.1) return false;
             if (Mathf.Abs(a.z - b.z) > 0.1) return false;
@@ -234,8 +212,7 @@ public class MeshAnalyzer : Singleton<MeshAnalyzer>
             return true; //indeed, very close
         }
 
-        public int GetHashCode(Vector3 obj)
-        {
+        public int GetHashCode(Vector3 obj) {
             //a cruder than default comparison, allows to compare very close-vector3's into same hash-code.
             return Math.Round(obj.x, 1).GetHashCode()
                  ^ Math.Round(obj.y, 1).GetHashCode() << 2
@@ -243,35 +220,29 @@ public class MeshAnalyzer : Singleton<MeshAnalyzer>
         }
     }
 
-    public class Line
-    {
+    public class Line {
         private Vector3 origin;
         private Vector3 direction;
 
-        public Line(Vector3 origin, Vector3 direction)
-        {
+        public Line(Vector3 origin, Vector3 direction) {
             this.origin = origin;
             this.direction = direction;
         }
 
-        public Vector3 Origin
-        {
-            get
-            {
+        public Vector3 Origin {
+            get {
                 return origin;
             }
         }
 
-        public Vector3 Direction
-        {
-            get
-            {
+        public Vector3 Direction {
+            get {
                 return direction;
             }
         }
     }
 
-    public class Plane: IComparable<Plane> {
+    public class Plane : IComparable<Plane> {
         // The lines that define the plane
         private List<Line> lines = new List<Line>();
 

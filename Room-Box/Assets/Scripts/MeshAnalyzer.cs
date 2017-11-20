@@ -1,4 +1,5 @@
-﻿using HoloToolkit.Unity;
+﻿using Assets.Scripts.Graph;
+using HoloToolkit.Unity;
 using System;
 using System.Collections;
 using System.Collections.Generic;
@@ -68,11 +69,13 @@ public class MeshAnalyzer : Singleton<MeshAnalyzer> {
 
     private IEnumerator AnalyzeRoutine() {
         Debug.Log("Start mesh analysis");
-
+        List<Graph<Vector3, Line>> graphs = new List<Graph<Vector3, Line>>();
         List<MeshFilter> filters = ScanManager.Instance.GetMeshFilters();
         for (int index = 0; index < filters.Count; index++) {
             MeshFilter filter = filters[index];
             if (filter != null && filter.sharedMesh != null) {
+                Graph<Vector3, Line> graph = new Graph<Vector3, Line>(v => v.Origin);
+                Debug.Log("New Graph created");
                 Mesh mesh = filter.sharedMesh;
                 mesh.RecalculateBounds();
                 mesh.RecalculateNormals();
@@ -84,8 +87,27 @@ public class MeshAnalyzer : Singleton<MeshAnalyzer> {
 
                 for (int i = 0; i < triangles.Length; i += 3) {
                     Vector3 v0 = filter.transform.TransformPoint(vertices[triangles[i]]);
+                    Vector3 n0 = filter.transform.TransformDirection(normals[triangles[i]].normalized);
+                    Line e0 = new Line(v0, n0);
+
                     Vector3 v1 = filter.transform.TransformPoint(vertices[triangles[i + 1]]);
+                    Vector3 n1 = filter.transform.TransformDirection(normals[triangles[i + 1]].normalized);
+                    Line e1 = new Line(v1, n1);
+
                     Vector3 v2 = filter.transform.TransformPoint(vertices[triangles[i + 2]]);
+                    Vector3 n2 = filter.transform.TransformDirection(normals[triangles[i + 2]].normalized);
+                    Line e2 = new Line(v2, n2);
+
+                    Node<Line> node0 = graph.AddNode(e0);
+                    Node<Line> node1 = graph.AddNode(e1);
+                    Node<Line> node2 = graph.AddNode(e2);
+                    Debug.Log("Nodes added. Size: " + graph.Count);
+
+                    graph.AddUndirectedEdge(node0, node1);
+                    graph.AddUndirectedEdge(node1, node2);
+                    graph.AddUndirectedEdge(node2, node0);
+                    Debug.Log("Edges added.");
+
                     Vector3 center = (v0 + v1 + v2) / 3;
                     Vector3 dir = Vector3.Normalize(Vector3.Cross(v1 - v0, v2 - v0));
                 }

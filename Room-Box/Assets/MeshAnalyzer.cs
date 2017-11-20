@@ -53,7 +53,7 @@ public class MeshAnalyzer : Singleton<MeshAnalyzer>
     private bool isMappingDone = false;
     private bool isAnalysisDone = false;
 
-    private List<List<Line>> foundPlanes = new List<List<Line>>();
+    private List<Plane> foundPlanes = new List<Plane>();
 
     private void Update()
     {
@@ -147,7 +147,7 @@ public class MeshAnalyzer : Singleton<MeshAnalyzer>
     {
         List<Plane> planes = FindMostPopulatedPlanes(normals);
         for (int i = 0; i < numberOfPlanes; i++) {
-            foundPlanes.Add(planes[i].Lines);
+            foundPlanes.Add(planes[i]);
         }
     }
 
@@ -156,21 +156,16 @@ public class MeshAnalyzer : Singleton<MeshAnalyzer>
         GameObject container = new GameObject("FoundPlanes");
         for (int i = 0; i < foundPlanes.Count; i++)
         {
-            List<Line> lines = foundPlanes[i];
-            Line planeLine = lines[0];
+            Plane plane = foundPlanes[i];
+            plane.Normalize();
 
-            // Create a cube as representation of the found plane.
-            GameObject cube = GameObject.CreatePrimitive(PrimitiveType.Cube);
-            cube.name = "Plane #" + i + " (" + lines.Count.ToString() + " normals)";
-            cube.transform.up = planeLine.Direction;
-            cube.transform.position = planeLine.Origin;
-            cube.transform.localScale = new Vector3(10, maxDistanceToPlane, 10);
+            GameObject cube = plane.Cube;
             cube.transform.parent = container.transform;
 
             // Debug
             if (drawWallNormals)
             {
-                foreach (Line n in lines)
+                foreach (Line n in plane.Lines)
                 {
                     Debug.DrawRay(n.Origin, n.Direction.normalized * normalsScale, colorWallNormals, drawDuration, true);
                 }
@@ -215,7 +210,7 @@ public class MeshAnalyzer : Singleton<MeshAnalyzer>
         return angle <= maxOrientationDifference;
     }
 
-    public List<List<Line>> FoundPlanes
+    public List<Plane> FoundPlanes
     {
         get
         {
@@ -275,6 +270,8 @@ public class MeshAnalyzer : Singleton<MeshAnalyzer>
         // The lines that define the plane
         private List<Line> lines = new List<Line>();
 
+        UnityEngine.Plane plane;
+
         // origin and normal are continously updated to avoid
         // going through all lines to recalculate them
         private Vector3 origin;
@@ -290,7 +287,7 @@ public class MeshAnalyzer : Singleton<MeshAnalyzer>
             // check the angle between plane normal and line direction
             if (Vector3.Angle(l.Direction, normal) > maxOrientationDifference) return false;
             // check distance between plane and line origin
-            //if (Vector3.Distance(Vector3.ProjectOnPlane(l.Origin, normal)+origin, l.Origin) > maxDistanceToPlane) return false;
+            if (Vector3.Distance(plane.ClosestPointOnPlane(l.Origin), l.Origin) > maxDistanceToPlane) return false;
             return true;
         }
 
@@ -298,10 +295,58 @@ public class MeshAnalyzer : Singleton<MeshAnalyzer>
             lines.Add(l);
             this.origin += (l.Origin - this.origin) / lines.Count;
             this.normal += (l.Direction - this.normal) / lines.Count;
+
+            this.plane = new UnityEngine.Plane(this.normal.normalized, this.origin);
         }
 
         public int CompareTo(Plane otherPlane) {
             return -this.lines.Count.CompareTo(otherPlane.Lines.Count);
+        }
+
+        public void Normalize() {
+            // make wall perpendicular to the floor/ceiling & normalize
+            this.normal = Vector3.ProjectOnPlane(this.normal, Vector3.up).normalized;
+        }
+
+        public GameObject Cube {
+            get {
+                Normalize();
+
+                // Create a cube as representation of the found plane.
+                GameObject cube = GameObject.CreatePrimitive(PrimitiveType.Cube);
+                cube.name = "Plane (" + this.Lines.Count.ToString() + " normals)";
+                cube.transform.up = this.Normal;
+                // reset x and z rotation
+                Vector3 rot = cube.transform.rotation.eulerAngles;
+                rot.x = 0;
+                rot.z = 90;
+                cube.transform.rotation = Quaternion.Euler(rot);
+
+                // find max distances to get an idea of the dimensions of the wall
+                float maxV = float.MinValue, minV = float.MaxValue, maxHPositive = float.MinValue, maxHNegative = float.MinValue;
+                Line maxHLinePositive = null, maxHLineNegative = null;
+                foreach (Line l in Lines) {
+                    float h = Vector2.Distance(new Vector2(Origin.x, Origin.z), new Vector2(l.Origin.x, l.Origin.z));
+                    if (h > maxHPositive && Vector3.SignedAngle(Vector3.up, l.Origin - Origin, Normal) > 0) {
+                        maxHPositive = h;
+                        maxHLinePositive = l;
+                    }
+                    if (h > maxHNegative && Vector3.SignedAngle(Vector3.up, l.Origin - Origin, Normal) < 0) {
+                        maxHNegative = h;
+                        maxHLineNegative = l;
+                    }
+
+                    maxV = Math.Max(maxV, l.Origin.y);
+                    minV = Math.Min(minV, l.Origin.y);
+                }
+
+                // set origin between max / min values
+                Vector3 xzMiddle = (maxHLineNegative.Origin + maxHLinePositive.Origin) / 2;
+                cube.transform.position = new Vector3(xzMiddle.x, minV + (maxV - minV) / 2, xzMiddle.z);
+
+                cube.transform.localScale = new Vector3(maxV - minV, maxDistanceToPlane, maxHPositive + maxHNegative);
+                return cube;
+            }
         }
 
         public Vector3 Origin {
@@ -312,6 +357,9 @@ public class MeshAnalyzer : Singleton<MeshAnalyzer>
         }
         public List<Line> Lines {
             get { return this.lines; }
+        }
+        public UnityEngine.Plane UnityPlane {
+            get { return this.plane; }
         }
     }
 }

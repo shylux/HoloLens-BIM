@@ -23,6 +23,7 @@ public class RoomBox : MonoBehaviour {
     private bool previousPlaneFindInProgress = false;
     float maxFloor = 0, maxCeiling = 0;
     BoundedPlane maxFloorPlane, maxCeilingPlane;
+    Vector3 aa;
 
     void Start() {
         lastPlaneFindingFinishTime = Time.realtimeSinceStartup;

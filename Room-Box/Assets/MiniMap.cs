@@ -21,7 +21,7 @@ public class MiniMap : MonoBehaviour {
     
 	void Start () {
         player = transform.Find("Player").gameObject;
-        addCube(new Vector3(-0.5f, 1, -0.8f), new Vector3(7, 3, 10));
+        //addCube(new Vector3(-0.5f, 1, -0.8f), new Vector3(7, 3, 10));
 	}
 
     void Update() {

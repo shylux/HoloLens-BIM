@@ -28,7 +28,8 @@ public class MeshAnalyzer : Singleton<MeshAnalyzer>
     private HashSet<Line> upNormals = new HashSet<Line>();
     private HashSet<Line> horizontalNormals = new HashSet<Line>();
 
-    public int numberOfPlanesToFind = 4;
+    public GameObject miniMap;
+    public int numberOfPlanesToDisplay = 4;
 
     [Range(0.0f, 180.0f)]
     public static float maxOrientationDifference = 2f;
@@ -46,14 +47,17 @@ public class MeshAnalyzer : Singleton<MeshAnalyzer>
     public Color colorHorizontalNormals = Color.green;
     public bool drawWallNormals = false;
     public Color colorWallNormals = Color.yellow;
-    public bool displayFoundPlanes = false;
+    public bool displayFoundWalls = false;
 
     private float drawDuration = 300f;
 
     private bool isMappingDone = false;
     private bool isAnalysisDone = false;
 
-    private List<Plane> foundPlanes = new List<Plane>();
+    private List<Plane> foundWalls = new List<Plane>();
+    private float maxCeiling, minFloor;
+
+    private Vector3 roomDimensions = Vector3.zero;
 
     private void Update()
     {
@@ -62,10 +66,10 @@ public class MeshAnalyzer : Singleton<MeshAnalyzer>
             StartCoroutine(AnalyzeRoutine());
         }
 
-        if (displayFoundPlanes && state == State.Finished)
+        if (displayFoundWalls && state == State.Finished)
         {
-            DisplayFoundPlanes();
-            displayFoundPlanes = false;
+            DisplayFoundWalls();
+            displayFoundWalls = false;
         }
     }
 
@@ -114,7 +118,11 @@ public class MeshAnalyzer : Singleton<MeshAnalyzer>
 
         yield return null;
 
-        FindPlanesFromNormals(horizontalNormals, numberOfPlanesToFind);
+        foundWalls = FindWallsFromNormals(horizontalNormals);
+        yield return null;
+        FindFloorAndCeiling(upNormals, downNormals);
+
+        CalculateRoomDimensions();
 
         yield return null;
 
@@ -143,20 +151,16 @@ public class MeshAnalyzer : Singleton<MeshAnalyzer>
         }
     }
 
-    private void FindPlanesFromNormals(IEnumerable<Line> normals, int numberOfPlanes)
+    public void DisplayFoundWalls()
     {
-        List<Plane> planes = FindMostPopulatedPlanes(normals);
-        for (int i = 0; i < numberOfPlanes; i++) {
-            foundPlanes.Add(planes[i]);
-        }
-    }
+        GameObject container = new GameObject("FoundWalls");
+        if (miniMap != null)
+            container.transform.parent = miniMap.transform;
 
-    public void DisplayFoundPlanes()
-    {
-        GameObject container = new GameObject("FoundPlanes");
-        for (int i = 0; i < foundPlanes.Count; i++)
+        int displayNumber = Math.Min(foundWalls.Count, numberOfPlanesToDisplay);
+        for (int i = 0; i < displayNumber; i++)
         {
-            Plane plane = foundPlanes[i];
+            Plane plane = foundWalls[i];
             plane.Normalize();
 
             GameObject cube = plane.Cube;
@@ -173,7 +177,7 @@ public class MeshAnalyzer : Singleton<MeshAnalyzer>
         }
     }
 
-    private List<Plane> FindMostPopulatedPlanes(IEnumerable<Line> availableLines) {
+    private List<Plane> FindWallsFromNormals(IEnumerable<Line> availableLines) {
         List<Plane> planes = new List<Plane>();
         foreach (Line line in availableLines) {
             bool matchingPlaneFound = false;
@@ -198,10 +202,99 @@ public class MeshAnalyzer : Singleton<MeshAnalyzer>
 
         // merge similar planes
         List<Plane> mergedPlanes = new List<Plane>();
-        foreach (Plane plane in planes) {
+        foreach (Plane checkPlane in planes) {
+            bool matchingPlaneFound = false;
+            foreach (Plane mergePlane in mergedPlanes) {
+                if (mergePlane.IsLineOnPlane(checkPlane.Line)) {
+                    mergePlane.MergePlane(checkPlane);
+                    matchingPlaneFound = true;
+                    break;
+                }
+            }
+
+            if (!matchingPlaneFound) {
+                mergedPlanes.Add(checkPlane);
+            }
         }
 
-        return planes;
+        return mergedPlanes;
+    }
+
+    private void FindFloorAndCeiling(IEnumerable<Line> floorLines, IEnumerable<Line> ceilingLines) {
+        minFloor = float.MaxValue;
+        foreach (Line l in floorLines) {
+            if (l.Origin.y < minFloor) minFloor = l.Origin.y;
+        }
+
+        maxCeiling = float.MinValue;
+        foreach (Line l in ceilingLines) {
+            if (l.Origin.y > maxCeiling) maxCeiling = l.Origin.y;
+        }
+    }
+
+    private void CalculateRoomDimensions() {
+        roomDimensions.y = maxCeiling - minFloor;
+
+        // take the biggest wall and search for the one opposite to it
+        Plane mainWall = foundWalls[0];
+        Plane mainOppositeWall = FindWallWithNormal(-mainWall.Normal);
+        // calculate the distance between the two walls
+        float mainDist = Vector3.Distance(mainWall.UnityPlane.ClosestPointOnPlane(mainOppositeWall.Origin), mainOppositeWall.Origin);
+
+        // search the two secondary walls perpendicular to the main wall
+        Vector3 secWallDirection = Quaternion.AngleAxis(90, Vector3.up) * mainWall.Normal;
+        Vector3 secOppositeWallDirection = Quaternion.AngleAxis(-90, Vector3.up) * mainWall.Normal;
+        Plane secWall = FindWallWithNormal(secWallDirection);
+        Plane secOppositeWall = FindWallWithNormal(secOppositeWallDirection);
+
+        // calculate the distance between the two secundary walls
+        float secDist = Vector3.Distance(secWall.UnityPlane.ClosestPointOnPlane(secOppositeWall.Origin), secOppositeWall.Origin);
+
+        // Put the bigger width/length of the room on the x coordinate
+        roomDimensions.x = Math.Max(mainDist, secDist);
+        roomDimensions.z = Math.Min(mainDist, secDist);
+
+        // Construct planes for floor and ceiling to do the intersection checks
+        Plane floorPlane = new Plane(new Vector3(0, minFloor, 0), Vector3.up);
+        Plane ceilingPlane = new Plane(new Vector3(0, maxCeiling, 0), Vector3.down);
+
+    }
+
+    private static Vector3 Intersection(Plane p, Line l) {
+        float rayDistance;
+        Ray ray = new Ray(l.Origin, l.Direction);
+        bool result = p.UnityPlane.Raycast(ray, out rayDistance);
+
+        if (!result && rayDistance == 0) throw new Exception("Plane and line are parallel");
+
+        return ray.GetPoint(rayDistance);
+    }
+
+    /**
+     * Source: https://forum.unity.com/threads/how-to-find-line-of-intersecting-planes.109458/
+     * */
+    private static Line Intersection(Plane a, Plane b) {
+        Vector3 direction = Vector3.Cross(a.Normal, b.Normal);
+
+        Vector3 ldir = Vector3.Cross(b.Normal, direction);
+        float numerator = Vector3.Dot(a.Normal, ldir);
+        Vector3 aTob = a.Origin - b.Origin;
+        float t = Vector3.Dot(a.Normal, aTob) / numerator;
+        Vector3 origin = b.Origin + t * ldir;
+
+        return new Line(origin, direction);
+    }
+
+
+    /** HELPER FUNCTIONS **/
+
+    private Plane FindWallWithNormal(Vector3 normal) {
+        foreach (Plane w in foundWalls) {
+            if (IsOrientationEqual(normal, w.Normal))
+                return w;
+        }
+
+        throw new Exception("No matching wall found.");
     }
 
     private bool IsOrientationEqual(Vector3 a, Vector3 b)
@@ -210,11 +303,11 @@ public class MeshAnalyzer : Singleton<MeshAnalyzer>
         return angle <= maxOrientationDifference;
     }
 
-    public List<Plane> FoundPlanes
+    public List<Plane> FoundWalls
     {
         get
         {
-            return foundPlanes;
+            return foundWalls;
         }
     }
 
@@ -270,7 +363,7 @@ public class MeshAnalyzer : Singleton<MeshAnalyzer>
         // The lines that define the plane
         private List<Line> lines = new List<Line>();
 
-        UnityEngine.Plane plane;
+        UnityEngine.Plane plane = new UnityEngine.Plane(Vector3.zero, Vector3.zero);
 
         // origin and normal are continously updated to avoid
         // going through all lines to recalculate them
@@ -296,7 +389,13 @@ public class MeshAnalyzer : Singleton<MeshAnalyzer>
             this.origin += (l.Origin - this.origin) / lines.Count;
             this.normal += (l.Direction - this.normal) / lines.Count;
 
-            this.plane = new UnityEngine.Plane(this.normal.normalized, this.origin);
+            this.plane.SetNormalAndPosition(Normal, Origin);
+        }
+
+        public void MergePlane(Plane p) {
+            foreach (Line l in p.Lines) {
+                AddLine(l);
+            }
         }
 
         public int CompareTo(Plane otherPlane) {
@@ -357,6 +456,9 @@ public class MeshAnalyzer : Singleton<MeshAnalyzer>
         }
         public List<Line> Lines {
             get { return this.lines; }
+        }
+        public Line Line {
+            get { return new Line(Origin, Normal); }
         }
         public UnityEngine.Plane UnityPlane {
             get { return this.plane; }

@@ -1,9 +1,10 @@
-﻿using HoloToolkit.Unity.SpatialMapping;
+﻿using HoloToolkit.Unity;
+using HoloToolkit.Unity.SpatialMapping;
 using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
 
-public class MiniMap : MonoBehaviour {
+public class MiniMap : Singleton<MiniMap> {
 
     public enum State { MAXI_MAP, MINI_MAP }
 

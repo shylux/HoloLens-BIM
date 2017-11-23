@@ -58,6 +58,7 @@ public class MeshAnalyzer : Singleton<MeshAnalyzer>
     private float maxCeiling, minFloor;
 
     private Vector3 roomDimensions = Vector3.zero;
+    private Vector3[] roomCorners;
 
     private void Update()
     {
@@ -156,6 +157,8 @@ public class MeshAnalyzer : Singleton<MeshAnalyzer>
         GameObject container = new GameObject("FoundWalls");
         if (miniMap != null)
             container.transform.parent = miniMap.transform;
+
+        MiniMap.Instance.addCube(roomCorners);
 
         int displayNumber = Math.Min(foundWalls.Count, numberOfPlanesToDisplay);
         for (int i = 0; i < displayNumber; i++)
@@ -258,6 +261,21 @@ public class MeshAnalyzer : Singleton<MeshAnalyzer>
         Plane floorPlane = new Plane(new Vector3(0, minFloor, 0), Vector3.up);
         Plane ceilingPlane = new Plane(new Vector3(0, maxCeiling, 0), Vector3.down);
 
+        // calculate all corner points of the room
+        roomCorners = new Vector3[8];
+        
+        roomCorners[0] = Intersection(mainWall, secWall, floorPlane);
+        roomCorners[1] = Intersection(mainWall, secOppositeWall, floorPlane);
+        roomCorners[2] = Intersection(mainOppositeWall, secOppositeWall, floorPlane);
+        roomCorners[3] = Intersection(mainOppositeWall, secWall, floorPlane);
+        roomCorners[4] = Intersection(mainWall, secWall, ceilingPlane);
+        roomCorners[5] = Intersection(mainWall, secOppositeWall, ceilingPlane);
+        roomCorners[6] = Intersection(mainOppositeWall, secOppositeWall, ceilingPlane);
+        roomCorners[7] = Intersection(mainOppositeWall, secWall, ceilingPlane);
+    }
+
+    private static Vector3 Intersection(Plane a, Plane b, Plane c) {
+        return Intersection(a, Intersection(b, c));
     }
 
     private static Vector3 Intersection(Plane p, Line l) {

@@ -417,7 +417,7 @@ MonoBehaviour:
   colorHorizontalNormals: {r: 0, g: 1, b: 0, a: 1}
   drawWallNormals: 1
   colorWallNormals: {r: 1, g: 0.92156863, b: 0.015686275, a: 1}
-  displayFoundPlanes: 1
+  displayFoundWalls: 1
 --- !u!4 &1140961369
 Transform:
   m_ObjectHideFlags: 0

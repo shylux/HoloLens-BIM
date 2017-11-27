@@ -173,6 +173,7 @@ GameObject:
   - component: {fileID: 725439265}
   - component: {fileID: 725439264}
   - component: {fileID: 725439269}
+  - component: {fileID: 725439270}
   m_Layer: 0
   m_Name: Main Camera
   m_TagString: MainCamera
@@ -263,8 +264,19 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   progressStrategy: 1
-  percentConsideredFinished: 0.1
+  percentConsideredFinished: 0.01
   timeBetweenHints: 5
+--- !u!114 &725439270
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_PrefabParentObject: {fileID: 0}
+  m_PrefabInternal: {fileID: 0}
+  m_GameObject: {fileID: 725439263}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: a0759f201f2789040bdc8fe1aacb23ae, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
 --- !u!1001 &882677748
 Prefab:
   m_ObjectHideFlags: 0
@@ -355,10 +367,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 18425f30009aec04db0c33668541f3c3, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  scanTime: 30
-  numberOfPlanesToFind: 4
-  maxOrientationDifference: 2
-  maxDistanceToPlane: 0.05
+  numberOfPlanesToFind: 100
   normalsScale: 1
   drawUpNormals: 0
   colorUpNormals: {r: 1, g: 0, b: 0, a: 1}
@@ -756,7 +765,7 @@ AudioSource:
       tangentMode: 0
     m_PreInfinity: 2
     m_PostInfinity: 2
-    m_RotationOrder: 4
+    m_RotationOrder: 0
   reverbZoneMixCustomCurve:
     serializedVersion: 2
     m_Curve:

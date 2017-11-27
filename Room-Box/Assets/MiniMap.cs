@@ -1,9 +1,10 @@
-﻿using HoloToolkit.Unity.SpatialMapping;
+﻿using HoloToolkit.Unity;
+using HoloToolkit.Unity.SpatialMapping;
 using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
 
-public class MiniMap : MonoBehaviour {
+public class MiniMap : Singleton<MiniMap> {
 
     public enum State { MAXI_MAP, MINI_MAP }
 
@@ -21,7 +22,7 @@ public class MiniMap : MonoBehaviour {
     
 	void Start () {
         player = transform.Find("Player").gameObject;
-        addCube(new Vector3(-0.5f, 1, -0.8f), new Vector3(7, 3, 10));
+        //addCube(new Vector3(-0.5f, 1, -0.8f), new Vector3(7, 3, 10));
 	}
 
     void Update() {

@@ -141,7 +141,7 @@ public class MeshAnalyzer : Singleton<MeshAnalyzer> {
         //yield return null;
 
 
-        FindPlanesFromGraphs(graphs, numberOfPlanesToFind);
+        FindPlanesFromGraphs(graphs, numberOfPlanesToDisplay);
         foundWalls = FindWallsFromNormals(horizontalNormals);
         yield return null;
         FindFloorAndCeiling(upNormals, downNormals);
@@ -223,7 +223,7 @@ public class MeshAnalyzer : Singleton<MeshAnalyzer> {
 
 
         for (int i = 0; i < numberOfPlanes; i++) {
-            foundPlanes.Add(planes[i].Lines);
+            foundWalls.Add(planes[i]);
         }
     }
 
@@ -387,6 +387,9 @@ public class MeshAnalyzer : Singleton<MeshAnalyzer> {
     }
 
     public struct Line {
+
+        public static readonly Line ZERO = new Line(Vector3.zero, Vector3.zero);
+
         public Vector3 Origin { get; private set; }
         public Vector3 Direction { get; private set; }
 
@@ -480,7 +483,7 @@ public class MeshAnalyzer : Singleton<MeshAnalyzer> {
 
                 // find max distances to get an idea of the dimensions of the wall
                 float maxV = float.MinValue, minV = float.MaxValue, maxHPositive = float.MinValue, maxHNegative = float.MinValue;
-                Line maxHLinePositive = null, maxHLineNegative = null;
+                Line maxHLinePositive = Line.ZERO, maxHLineNegative = Line.ZERO;
                 foreach (Line l in Lines) {
                     float h = Vector2.Distance(new Vector2(Origin.x, Origin.z), new Vector2(l.Origin.x, l.Origin.z));
                     if (h > maxHPositive && Vector3.SignedAngle(Vector3.up, l.Origin - Origin, Normal) > 0) {

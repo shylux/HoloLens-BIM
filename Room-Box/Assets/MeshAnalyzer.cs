@@ -137,17 +137,14 @@ public class MeshAnalyzer : Singleton<MeshAnalyzer> {
         }
 
         Debug.Log("Normals categorized! Up's: " + upNormals.Count + " Down's: " + downNormals.Count + " Horizontal's: " + horizontalNormals.Count);
-
-        //yield return null;
-
-
-        FindPlanesFromGraphs(graphs, numberOfPlanesToDisplay);
-        foundWalls = FindWallsFromNormals(horizontalNormals);
         yield return null;
+
+        foundWalls = FindPlanesFromGraphs(graphs, numberOfPlanesToDisplay);
+        //foundWalls = FindWallsFromNormals(horizontalNormals);
+        yield return null;
+
         FindFloorAndCeiling(upNormals, downNormals);
-
         CalculateRoomDimensions();
-
         yield return null;
 
         state = State.Finished;
@@ -200,7 +197,7 @@ public class MeshAnalyzer : Singleton<MeshAnalyzer> {
         }
     }
 
-    private void FindPlanesFromGraphs(IEnumerable<Graph<Vector3, Line>> graphs, int numberOfPlanes) {
+    private List<Plane> FindPlanesFromGraphs(IEnumerable<Graph<Vector3, Line>> graphs, int numberOfPlanes) {
         List<Plane> planes = new List<Plane>();
 
         foreach (Graph<Vector3, Line> graph in graphs) {
@@ -221,10 +218,28 @@ public class MeshAnalyzer : Singleton<MeshAnalyzer> {
             }
         }
 
+        // sorts by line count
+        planes.Sort();
 
-        for (int i = 0; i < numberOfPlanes; i++) {
-            foundWalls.Add(planes[i]);
+
+        // merge similar planes
+        List<Plane> mergedPlanes = new List<Plane>();
+        foreach (Plane checkPlane in planes) {
+            bool matchingPlaneFound = false;
+            foreach (Plane mergePlane in mergedPlanes) {
+                if (mergePlane.IsLineOnPlane(checkPlane.Line)) {
+                    mergePlane.MergePlane(checkPlane);
+                    matchingPlaneFound = true;
+                    break;
+                }
+            }
+
+            if (!matchingPlaneFound) {
+                mergedPlanes.Add(checkPlane);
+            }
         }
+
+        return mergedPlanes;
     }
 
     private void AddNeighbours(Node<Line> node, Plane p) {

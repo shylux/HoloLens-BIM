@@ -9,9 +9,10 @@ namespace Assets.Scripts.Graph {
         private Func<T, K> idxFunc;
         private Dictionary<K, Node<T>> nodes;
 
-        public Graph(Func<T, K> idxFunc) {
+        public Graph(Func<T, K> idxFunc) : this(idxFunc, null) { }
+        public Graph(Func<T, K> idxFunc, IEqualityComparer<K> comparer) {
             this.idxFunc = idxFunc;
-            this.nodes = new Dictionary<K, Node<T>>();
+            this.nodes = new Dictionary<K, Node<T>>(comparer);
         }
 
         public Node<T> AddNode(T value) {

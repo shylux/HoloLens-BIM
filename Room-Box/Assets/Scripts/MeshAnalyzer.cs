@@ -1,8 +1,10 @@
 ﻿using Assets.Scripts.Graph;
+using Assets.Scripts.Utils;
 using HoloToolkit.Unity;
 using System;
 using System.Collections;
 using System.Collections.Generic;
+using System.Linq;
 using UnityEngine;
 
 public class MeshAnalyzer : Singleton<MeshAnalyzer> {
@@ -74,9 +76,9 @@ public class MeshAnalyzer : Singleton<MeshAnalyzer> {
         for (int index = 0; index < filters.Count; index++) {
             MeshFilter filter = filters[index];
             if (filter != null && filter.sharedMesh != null) {
-                Graph<Vector3, Line> graph = new Graph<Vector3, Line>(v => v.Origin);
-                Debug.Log("New Graph created");
+                Graph<Vector3, Line> graph = new Graph<Vector3, Line>(v => v.Origin, VectorUtils.V3_COMPARER);
                 Mesh mesh = filter.sharedMesh;
+                Debug.Log("New Graph created (" + mesh.vertexCount + ")");
                 mesh.RecalculateBounds();
                 mesh.RecalculateNormals();
                 mesh.RecalculateTangents();
@@ -101,12 +103,10 @@ public class MeshAnalyzer : Singleton<MeshAnalyzer> {
                     Node<Line> node0 = graph.AddNode(e0);
                     Node<Line> node1 = graph.AddNode(e1);
                     Node<Line> node2 = graph.AddNode(e2);
-                    Debug.Log("Nodes added. Size: " + graph.Count);
 
                     graph.AddUndirectedEdge(node0, node1);
                     graph.AddUndirectedEdge(node1, node2);
                     graph.AddUndirectedEdge(node2, node0);
-                    Debug.Log("Edges added.");
 
                     Vector3 center = (v0 + v1 + v2) / 3;
                     Vector3 dir = Vector3.Normalize(Vector3.Cross(v1 - v0, v2 - v0));
@@ -268,23 +268,6 @@ public class MeshAnalyzer : Singleton<MeshAnalyzer> {
         }
     }
 
-    class Vector3CoordComparer : IEqualityComparer<Vector3> {
-        public bool Equals(Vector3 a, Vector3 b) {
-            if (Mathf.Abs(a.x - b.x) > 0.1) return false;
-            if (Mathf.Abs(a.y - b.y) > 0.1) return false;
-            if (Mathf.Abs(a.z - b.z) > 0.1) return false;
-
-            return true; //indeed, very close
-        }
-
-        public int GetHashCode(Vector3 obj) {
-            //a cruder than default comparison, allows to compare very close-vector3's into same hash-code.
-            return Math.Round(obj.x, 1).GetHashCode()
-                 ^ Math.Round(obj.y, 1).GetHashCode() << 2
-                 ^ Math.Round(obj.z, 1).GetHashCode() >> 2;
-        }
-    }
-
     public struct Line {
         public Vector3 Origin { get; private set; }
         public Vector3 Direction { get; private set; }
@@ -293,6 +276,26 @@ public class MeshAnalyzer : Singleton<MeshAnalyzer> {
             Origin = origin;
             Direction = direction;
         }
+
+        public override bool Equals(object obj) {
+            if (obj == null || GetType() != obj.GetType()) {
+                return false;
+            }
+
+            Line that = (Line)obj;
+
+            return VectorUtils.V3_COMPARER.Equals(this.Origin, that.Origin) && VectorUtils.V3_COMPARER.Equals(this.Direction, that.Direction);
+        }
+
+        public override int GetHashCode() {
+            unchecked {
+                int hash = 17;
+                hash = hash * 31 + VectorUtils.V3_COMPARER.GetHashCode(Origin);
+                hash = hash * 31 + VectorUtils.V3_COMPARER.GetHashCode(Direction);
+                return hash;
+            }
+        }
+        
     }
 
     public class Plane : IComparable<Plane> {

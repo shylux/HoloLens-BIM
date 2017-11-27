@@ -26,6 +26,12 @@ namespace Assets.Scripts.Graph {
             return node;
         }
 
+        public List<Node<T>> Nodes {
+            get {
+                return nodes.Values.ToList();
+            }
+        }
+
         public void AddUndirectedEdge(Node<T> from, Node<T> to) {
             from.AddNeighbour(to);
             to.AddNeighbour(from);

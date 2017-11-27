@@ -110,25 +110,31 @@ public class MeshAnalyzer : Singleton<MeshAnalyzer> {
 
                     Vector3 center = (v0 + v1 + v2) / 3;
                     Vector3 dir = Vector3.Normalize(Vector3.Cross(v1 - v0, v2 - v0));
+
+                    CategorizeNormal(dir, center);
                 }
+
+                graphs.Add(graph);
+                Debug.Log("Graph added (" + graph.Count + ")");
 
                 yield return null;
 
-                for (int i = 0; i < vertices.Length; i++) {
-                    Vector3 vertice = filter.transform.TransformPoint(vertices[i]);
-                    Vector3 normal = filter.transform.TransformDirection(normals[i].normalized);
+                //for (int i = 0; i < vertices.Length; i++) {
+                //    Vector3 vertice = filter.transform.TransformPoint(vertices[i]);
+                //    Vector3 normal = filter.transform.TransformDirection(normals[i].normalized);
 
-                    CategorizeNormal(normal, vertice);
-                }
+                //    CategorizeNormal(normal, vertice);
+                //}
             }
             yield return null;
         }
 
         Debug.Log("Normals categorized! Up's: " + upNormals.Count + " Down's: " + downNormals.Count + " Horizontal's: " + horizontalNormals.Count);
 
-        yield return null;
+        //yield return null;
 
-        FindPlanesFromNormals(horizontalNormals, numberOfPlanesToFind);
+        //FindPlanesFromNormals(horizontalNormals, numberOfPlanesToFind);
+        FindPlanesFromGraphs(graphs, numberOfPlanesToFind);
 
         yield return null;
 
@@ -157,6 +163,43 @@ public class MeshAnalyzer : Singleton<MeshAnalyzer> {
         List<Plane> planes = FindMostPopulatedPlanes(normals);
         for (int i = 0; i < numberOfPlanes; i++) {
             foundPlanes.Add(planes[i].Lines);
+        }
+    }
+
+    private void FindPlanesFromGraphs(IEnumerable<Graph<Vector3, Line>> graphs, int numberOfPlanes) {
+        List<Plane> planes = new List<Plane>();
+
+        foreach (Graph<Vector3, Line> graph in graphs) {
+            foreach (Node<Line> node in graph.Nodes.Where(n => !n.Visited)) {
+                Plane plane = null;
+                node.Visited = true;
+                foreach (Plane p in planes) {
+                    if (p.IsLineOnPlane(node.Value)) {
+                        plane = p;
+                        plane.AddLine(node.Value);
+                    }
+                }
+                if (plane == null) {
+                    plane = new Plane(node.Value.Origin, node.Value.Direction);
+                    planes.Add(plane);
+                }
+                AddNeighbours(node, plane);
+            }
+        }
+
+
+        for (int i = 0; i < numberOfPlanes; i++) {
+            foundPlanes.Add(planes[i].Lines);
+        }
+    }
+
+    private void AddNeighbours(Node<Line> node, Plane p) {
+        foreach (Node<Line> neighbour in node.Neighbours.Where(n => !n.Visited)) {
+            if (p.IsLineOnPlane(neighbour.Value)) {
+                neighbour.Visited = true;
+                p.AddLine(neighbour.Value);
+                AddNeighbours(node, p);
+            }
         }
     }
 

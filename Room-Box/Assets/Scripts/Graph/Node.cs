@@ -37,5 +37,7 @@ namespace Assets.Scripts.Graph {
             }
         }
 
+        public bool Visited { get; set; }
+
     }
 }

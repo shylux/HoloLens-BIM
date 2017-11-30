@@ -25,6 +25,7 @@ public class RoomIdentifier : Singleton<RoomIdentifier> {
 
     private MeshAnalyzer analyzer;
 
+    private PhysicalRoom physicalRoom;
     private List<VirtualRoom> virtualRooms = new List<VirtualRoom>();
 
     void Start () {
@@ -48,6 +49,9 @@ public class RoomIdentifier : Singleton<RoomIdentifier> {
                 vr.DrawProbes();
             }
         }
+        if (showPhysicalProbes && physicalRoom != null) {
+            physicalRoom.DrawProbes();
+        }
 	}
 
     // does the tests on the virtual rooms
@@ -58,7 +62,8 @@ public class RoomIdentifier : Singleton<RoomIdentifier> {
     }
 
     void IdentifyRoom() {
-        //Debug.Log("Loaded " + rooms.Length + " rooms.");
+        physicalRoom = new PhysicalRoom(MeshAnalyzer.Instance.roomDimensions, MeshAnalyzer.Instance.roomCorners);
+        physicalRoom.GenerateFootprint();
 
         //MiniMap.Instance.Activate();
     }
@@ -125,5 +130,30 @@ public abstract class Room {
         foreach (Ray ray in probes.Keys) {
             Debug.DrawLine(ray.origin, ray.origin + ray.direction * RoomIdentifier.Instance.probeDepth, (probes[ray]) ? Color.green : Color.red, 0.1f, true);
         }
+    }
+}
+
+
+public class PhysicalRoom : Room {
+
+    private Vector3[] corners;
+
+    public PhysicalRoom(Vector3 _dimensions, Vector3[] _corners) {
+        this.dimensions = _dimensions;
+        this.corners = _corners;
+    }
+
+    protected override bool RayCast(Ray r) {
+        RaycastHit hit = new RaycastHit();
+        return Physics.Raycast(r, out hit, RoomIdentifier.Instance.probeDepth, LayerMask.GetMask("SpatialMesh"));
+    }
+
+    protected override Vector3[] RoomCorners() {
+        // the corners from the analyzer script follow the big wall from the first to the second corner.
+        // but we don't know if it is clock or anti-clock wise.
+
+        Vector3 normal = Vector3.Cross(corners[1] - corners[0], corners[3] - corners[0]);
+        
+        return corners;
     }
 }

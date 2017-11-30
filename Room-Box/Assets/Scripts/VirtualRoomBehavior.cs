@@ -14,16 +14,16 @@ public class VirtualRoomBehavior : MonoBehaviour {
 
     public void Start() {
         meshCollider = GetComponent<MeshCollider>();
-        room = new VirtualRoom(this, dimensions);
+        room = new VirtualRoom(dimensions, this);
     }
 }
 
 public class VirtualRoom : Room {
     VirtualRoomBehavior behavior;
 
-    public VirtualRoom(VirtualRoomBehavior bhvr, Vector3 dims) {
-        this.behavior = bhvr;
-        this.dimensions = dims;
+    public VirtualRoom(Vector3 _dimensions, VirtualRoomBehavior _behavior) {
+        this.dimensions = _dimensions;
+        this.behavior = _behavior;
     }
 
     protected override bool RayCast(Ray r) {

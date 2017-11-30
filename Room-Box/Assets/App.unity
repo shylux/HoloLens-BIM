@@ -429,6 +429,7 @@ MonoBehaviour:
   colorWallNormals: {r: 1, g: 0.92156863, b: 0.015686275, a: 1}
   displayFoundWalls: 0
   roomDimensions: {x: 0, y: 0, z: 0}
+  roomCorners: []
 --- !u!4 &1140961369
 Transform:
   m_ObjectHideFlags: 0
@@ -474,7 +475,7 @@ MonoBehaviour:
   sensitivity: 200
   probeDepth: 0.8
   showVirtualProbes: 0
-  showPhysicalProbes: 0
+  showPhysicalProbes: 1
   state: 0
 --- !u!1 &1453669088
 GameObject:

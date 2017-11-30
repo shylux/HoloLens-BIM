@@ -58,7 +58,7 @@ public class MeshAnalyzer : Singleton<MeshAnalyzer>
     private float maxCeiling, minFloor;
 
     public Vector3 roomDimensions = Vector3.zero;
-    private Vector3[] roomCorners;
+    public Vector3[] roomCorners;
 
     private void Update()
     {

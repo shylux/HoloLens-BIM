@@ -150,9 +150,41 @@ public class PhysicalRoom : Room {
 
     protected override Vector3[] RoomCorners() {
         // the corners from the analyzer script follow the big wall from the first to the second corner.
-        // but we don't know if it is clock or anti-clock wise.
+        // but we don't know if it is clock or counter-clock wise.
 
         Vector3 normal = Vector3.Cross(corners[1] - corners[0], corners[3] - corners[0]);
+
+        if (normal.y < 0) {
+            // the corners are counter-clock wise. switch them around.
+            Vector3 tmp;
+
+            // bottom
+            /*
+            tmp = corners[1];
+            corners[1] = corners[3];
+            corners[3] = tmp;
+
+            // top
+            tmp = corners[5];
+            corners[5] = corners[7];
+            corners[7] = tmp;
+            /**/
+
+            // since we changed the order the first step is now along the smaller wall.
+            // rotate by 1 to start with a big wall.
+
+            // bottom
+            /*
+            tmp = corners[3];
+            System.Array.Copy(corners, 0, corners, 1, 3);
+            corners[0] = tmp;
+
+            // top
+            tmp = corners[7];
+            System.Array.Copy(corners, 4, corners, 5, 3);
+            corners[4] = tmp;
+            /**/
+        }
         
         return corners;
     }

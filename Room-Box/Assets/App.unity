@@ -398,7 +398,7 @@ GameObject:
   - component: {fileID: 1140961370}
   - component: {fileID: 1140961368}
   - component: {fileID: 1140961371}
-  m_Layer: 0
+  m_Layer: 8
   m_Name: Locator
   m_TagString: Untagged
   m_Icon: {fileID: 0}

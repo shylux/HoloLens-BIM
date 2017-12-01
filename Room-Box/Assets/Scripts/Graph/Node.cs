@@ -4,16 +4,17 @@ using System.Linq;
 using System.Text;
 
 namespace Assets.Scripts.Graph {
-    public class Node<T> {
+    public struct Node<T> {
 
         private T data;
         private List<Node<T>> neighbours;
 
-        public Node() { }
+        //public Node() { }
         public Node(T data) : this(data, new List<Node<T>>()) { }
         public Node(T data, List<Node<T>> neighbours) {
             this.data = data;
             this.neighbours = neighbours;
+            this.Visited = false;
         }
 
         public void AddNeighbour(Node<T> node) {

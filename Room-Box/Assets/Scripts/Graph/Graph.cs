@@ -4,7 +4,7 @@ using System.Linq;
 using System.Text;
 
 namespace Assets.Scripts.Graph {
-    public class Graph<K, T> {
+    public struct Graph<K, T> {
 
         private Func<T, K> idxFunc;
         private Dictionary<K, Node<T>> nodes;
@@ -17,11 +17,12 @@ namespace Assets.Scripts.Graph {
 
         public Node<T> AddNode(T value) {
             Node<T> node;
-            nodes.TryGetValue(idxFunc.Invoke(value), out node);
 
-            if (node == null) {
+            if (!nodes.ContainsKey(idxFunc.Invoke(value))) {
                 node = new Node<T>(value);
                 nodes.Add(idxFunc(node.Value), node);
+            } else {
+                nodes.TryGetValue(idxFunc.Invoke(value), out node);
             }
 
             return node;

@@ -201,20 +201,23 @@ public class MeshAnalyzer : Singleton<MeshAnalyzer> {
         List<Plane> planes = new List<Plane>();
 
         foreach (Graph<Vector3, Line> graph in graphs) {
-            foreach (Node<Line> node in graph.Nodes.Where(n => !n.Visited)) {
-                Plane plane = null;
-                node.Visited = true;
-                foreach (Plane p in planes) {
-                    if (p.IsLineOnPlane(node.Value)) {
-                        plane = p;
-                        plane.AddLine(node.Value);
+            for (int i = 0; i < graph.Nodes.Count; i++) {
+                Node<Line> node = graph.Nodes[i];
+                if (!node.Visited) {
+                    Plane plane = null;
+                    node.Visited = true;
+                    foreach (Plane p in planes) {
+                        if (p.IsLineOnPlane(node.Value)) {
+                            plane = p;
+                            plane.AddLine(node.Value);
+                        }
                     }
+                    if (plane == null) {
+                        plane = new Plane(node.Value.Origin, node.Value.Direction);
+                        planes.Add(plane);
+                    }
+                    AddNeighbours(node, plane);
                 }
-                if (plane == null) {
-                    plane = new Plane(node.Value.Origin, node.Value.Direction);
-                    planes.Add(plane);
-                }
-                AddNeighbours(node, plane);
             }
         }
 
@@ -243,8 +246,9 @@ public class MeshAnalyzer : Singleton<MeshAnalyzer> {
     }
 
     private void AddNeighbours(Node<Line> node, Plane p) {
-        foreach (Node<Line> neighbour in node.Neighbours.Where(n => !n.Visited)) {
-            if (p.IsLineOnPlane(neighbour.Value)) {
+        for (int i = 0; i < node.Neighbours.Count; i++) {
+            Node<Line> neighbour = node.Neighbours[i];
+            if (!neighbour.Visited && p.IsLineOnPlane(neighbour.Value)) {
                 neighbour.Visited = true;
                 p.AddLine(neighbour.Value);
                 AddNeighbours(node, p);

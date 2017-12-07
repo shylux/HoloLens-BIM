@@ -57,8 +57,8 @@ public class MeshAnalyzer : Singleton<MeshAnalyzer>
     private List<Plane> foundWalls = new List<Plane>();
     private float maxCeiling, minFloor;
 
-    private Vector3 roomDimensions = Vector3.zero;
-    private Vector3[] roomCorners;
+    public Vector3 roomDimensions = Vector3.zero;
+    public Vector3[] roomCorners;
 
     private void Update()
     {
@@ -157,8 +157,6 @@ public class MeshAnalyzer : Singleton<MeshAnalyzer>
         GameObject container = new GameObject("FoundWalls");
         if (miniMap != null)
             container.transform.parent = miniMap.transform;
-
-        MiniMap.Instance.addCube(roomCorners);
 
         int displayNumber = Math.Min(foundWalls.Count, numberOfPlanesToDisplay);
         for (int i = 0; i < displayNumber; i++)
@@ -272,6 +270,8 @@ public class MeshAnalyzer : Singleton<MeshAnalyzer>
         roomCorners[5] = Intersection(mainWall, secOppositeWall, ceilingPlane);
         roomCorners[6] = Intersection(mainOppositeWall, secOppositeWall, ceilingPlane);
         roomCorners[7] = Intersection(mainOppositeWall, secWall, ceilingPlane);
+
+        MiniMap.Instance.addCube(roomCorners);
     }
 
     private static Vector3 Intersection(Plane a, Plane b, Plane c) {

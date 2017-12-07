@@ -19,11 +19,23 @@ public class MiniMap : Singleton<MiniMap> {
     private Vector3 placedDownPosition;
 
     private GameObject player;
-    
-	void Start () {
+    private MeshRenderer[] renderers;
+
+
+    void Start () {
         player = transform.Find("Player").gameObject;
         //addCube(new Vector3(-0.5f, 1, -0.8f), new Vector3(7, 3, 10));
+        renderers = GetComponentsInChildren<MeshRenderer>();
+        foreach (MeshRenderer r in renderers) {
+            r.enabled = false;
+        }
 	}
+
+    public void Activate() {
+        foreach (MeshRenderer r in renderers) {
+            r.enabled = true;
+        }
+    }
 
     void Update() {
         float transitionProgress = (Time.realtimeSinceStartup - transitionStartTime) / transitionTime;

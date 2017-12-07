@@ -82,10 +82,18 @@ public abstract class Room {
     // Second corner is the one along the bigger wall. Rotate clockwise, then to the same with the top corners.
     protected abstract Vector3[] RoomCorners();
 
+    protected Vector3 roomCenter = Vector3.zero;
+
     public void GenerateFootprint() {
         footprint = new bool[4 * RoomIdentifier.Instance.sensitivity];
 
         Vector3[] rc = RoomCorners();
+        
+        // calc room center
+        foreach (Vector3 v in rc) {
+            roomCenter += v;
+        }
+        roomCenter /= rc.Length;
         
         // start in the direction of the big wall
         bool[] first = ScanWall((rc[0] + rc[4]) / 2, (rc[1] + rc[5]) / 2);
@@ -110,6 +118,12 @@ public abstract class Room {
         end = end + (start - end).normalized * 0.1f;
 
         Vector3 wallNormal = Vector3.Cross(end - start, Vector3.up).normalized;
+
+        // make sure the raycast start from inside the room
+        // because the spatial mesh is only one sided and so are the colliders
+        if (Vector3.Angle(roomCenter - start, wallNormal) > 90f) {
+            wallNormal = -wallNormal;
+        }
 
         // move the start/end away from the wall to the ray start positions
         start = start + wallNormal * RoomIdentifier.Instance.probeDepth / 2;
@@ -156,25 +170,22 @@ public class PhysicalRoom : Room {
 
         if (normal.y < 0) {
             // the corners are counter-clock wise. switch them around.
-            Vector3 tmp;
 
             // bottom
-            /*
+            Vector3 tmp;
             tmp = corners[1];
             corners[1] = corners[3];
             corners[3] = tmp;
-
+            
             // top
             tmp = corners[5];
             corners[5] = corners[7];
             corners[7] = tmp;
-            /**/
 
             // since we changed the order the first step is now along the smaller wall.
             // rotate by 1 to start with a big wall.
 
             // bottom
-            /*
             tmp = corners[3];
             System.Array.Copy(corners, 0, corners, 1, 3);
             corners[0] = tmp;
@@ -183,7 +194,6 @@ public class PhysicalRoom : Room {
             tmp = corners[7];
             System.Array.Copy(corners, 4, corners, 5, 3);
             corners[4] = tmp;
-            /**/
         }
         
         return corners;

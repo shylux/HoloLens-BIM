@@ -134,13 +134,13 @@ public class ScanProgress: Singleton<ScanProgress> {
 
         // check floor
         var floorSens = from Sensor s in sensors
-                        where s.lat <= -30
+                        where s.lat >= 30
                         select s;
         progressByDirection[8] = (floorSens.Count(s => s.detected) / floorSens.Count() > percentConsideredFinished);
 
         // check ceiling
         var ceilingSens = from Sensor s in sensors
-                        where s.lat >= 30
+                        where s.lat <= -30
                         select s;
         progressByDirection[9] = (ceilingSens.Count(s => s.detected) / ceilingSens.Count() > percentConsideredFinished);
 

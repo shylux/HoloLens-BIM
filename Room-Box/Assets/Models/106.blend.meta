@@ -1,42 +1,37 @@
 fileFormatVersion: 2
-guid: 6c7618656a76f7b4db160ae57602739e
-timeCreated: 1510779650
+guid: dab4d8b30fc42df4084b4006746b0a8a
+timeCreated: 1512663527
 licenseType: Free
 ModelImporter:
   serializedVersion: 21
   fileIDToRecycleName:
     100000: //RootNode
     100002: Room
-    100004: Room_001
-    100006: Room_002
+    100004: Room_002
+    100006: WindowsOutside
     100008: WindowWall_big
     100010: WindowWall_small
-    100012: WindowsOutside
     400000: //RootNode
     400002: Room
-    400004: Room_001
-    400006: Room_002
+    400004: Room_002
+    400006: WindowsOutside
     400008: WindowWall_big
     400010: WindowWall_small
-    400012: WindowsOutside
     2300000: Room
-    2300002: Room_001
-    2300004: Room_002
+    2300002: Room_002
+    2300004: WindowsOutside
     2300006: WindowWall_big
     2300008: WindowWall_small
-    2300010: WindowsOutside
     3300000: Room
-    3300002: Room_001
-    3300004: Room_002
+    3300002: Room_002
+    3300004: WindowsOutside
     3300006: WindowWall_big
     3300008: WindowWall_small
-    3300010: WindowsOutside
     4300000: Room_002
-    4300002: Room_001
-    4300004: WindowWall_small
-    4300006: WindowWall_big
-    4300008: Room
-    4300010: WindowsOutside
+    4300002: WindowWall_small
+    4300004: WindowWall_big
+    4300006: Room
+    4300008: WindowsOutside
     7400000: Default Take
     9500000: //RootNode
   materials:

@@ -28,6 +28,8 @@ public class SurfaceEntry {
         this.gameObject = new GameObject(String.Format("Surface-{0}", surfaceId));
         this.gameObject.AddComponent<MeshFilter>();
         this.gameObject.AddComponent<WorldAnchor>();
+        this.gameObject.AddComponent<MeshCollider>();
+        this.gameObject.layer = 8;
 
         if (rendering) {
             MeshRenderer meshRenderer = this.gameObject.AddComponent<MeshRenderer>();
@@ -35,8 +37,6 @@ public class SurfaceEntry {
             meshRenderer.receiveShadows = false;
             meshRenderer.sharedMaterial = new Material(mat);
             meshRenderer.sharedMaterial.SetColor("_WireColor", Color.red);
-
-            this.gameObject.AddComponent<MeshCollider>();
         }
     }
 }

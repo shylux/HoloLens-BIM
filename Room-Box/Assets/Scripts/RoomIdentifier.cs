@@ -83,12 +83,21 @@ public class RoomIdentifier : Singleton<RoomIdentifier> {
     void AlignVirtualAndPhysicalSpace(VirtualRoom vr) {
         Transform floorPlan = MiniMap.Instance.transform.Find("FloorPlan");
         // translate to origin
-        floorPlan.Translate(-vr.Tansform.position);
+        //floorPlan.Translate(-vr.Tansform.position);
 
         // rotate
         Vector3[] corners = physicalRoom.RoomCorners();
         Vector3 rotation = ((corners[1] - corners[0]) + (corners[2] - corners[3]));
         floorPlan.Rotate(Quaternion.FromToRotation(Vector3.forward, rotation).eulerAngles);
+
+        floorPlan.position -= vr.Tansform.position;
+        floorPlan.position += physicalRoom.Anchor;
+
+        Debug.Log("Floorplan " + floorPlan.position);
+        Debug.Log("VR " + vr.Tansform.position);
+        Debug.Log("PR " + physicalRoom.Anchor);
+        //translate
+        //floorPlan.Translate(-vr.Tansform.position);
 
         // translate to physical position
         //floorPlan.Translate(physicalRoom.Anchor);

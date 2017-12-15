@@ -474,7 +474,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   sensitivity: 200
   probeDepth: 0.8
-  showVirtualProbes: 0
+  showVirtualProbes: 1
   showPhysicalProbes: 1
   state: 0
 --- !u!1 &1453669088
@@ -877,7 +877,7 @@ Prefab:
       objectReference: {fileID: 0}
     - target: {fileID: 4170938974650950, guid: 655f585a554b8e140967b7caf3346c69, type: 2}
       propertyPath: m_LocalRotation.z
-      value: -0
+      value: 0
       objectReference: {fileID: 0}
     - target: {fileID: 4170938974650950, guid: 655f585a554b8e140967b7caf3346c69, type: 2}
       propertyPath: m_LocalRotation.w
@@ -891,6 +891,14 @@ Prefab:
         type: 2}
       propertyPath: m_Enabled
       value: 1
+      objectReference: {fileID: 0}
+    - target: {fileID: 4170938974650950, guid: 655f585a554b8e140967b7caf3346c69, type: 2}
+      propertyPath: m_LocalEulerAnglesHint.x
+      value: -90.00001
+      objectReference: {fileID: 0}
+    - target: {fileID: 4170938974650950, guid: 655f585a554b8e140967b7caf3346c69, type: 2}
+      propertyPath: m_LocalEulerAnglesHint.y
+      value: 0
       objectReference: {fileID: 0}
     m_RemovedComponents: []
   m_ParentPrefab: {fileID: 100100000, guid: 655f585a554b8e140967b7caf3346c69, type: 2}

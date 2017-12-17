@@ -93,7 +93,7 @@ public class ScanProgress: Singleton<ScanProgress> {
                 sensor.detected = false;
 
             // do raycast, but only if the sensor didn't already detect
-            if (!sensor.detected && Physics.Raycast(transform.position, sensor.direction, LayerMask.GetMask("SpatialMesh")))
+            if (!sensor.detected && Physics.Raycast(transform.position, sensor.direction, Mathf.Infinity, LayerMask.GetMask("SpatialMesh")))
                 sensor.detected = true;
 
             // draw debug rays

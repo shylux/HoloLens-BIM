@@ -129,20 +129,20 @@ public class ScanProgress: Singleton<ScanProgress> {
                        where s.lat > -30 && s.lat < 30 && mod(s.lng, 360) >= i*45 && mod(s.lng, 360) < (i+1)*45
                        select s;
 
-            progressByDirection[i] = (wallSens.Count(s => s.detected) / wallSens.Count() > percentConsideredFinished);
+            progressByDirection[i] = (wallSens.Count(s => s.detected) / (float) wallSens.Count() > percentConsideredFinished);
         }
 
         // check floor
         var floorSens = from Sensor s in sensors
                         where s.lat >= 30
                         select s;
-        progressByDirection[8] = (floorSens.Count(s => s.detected) / floorSens.Count() > percentConsideredFinished);
+        progressByDirection[8] = (floorSens.Count(s => s.detected) / (float) floorSens.Count() > percentConsideredFinished);
 
         // check ceiling
         var ceilingSens = from Sensor s in sensors
                         where s.lat <= -30
                         select s;
-        progressByDirection[9] = (ceilingSens.Count(s => s.detected) / ceilingSens.Count() > percentConsideredFinished);
+        progressByDirection[9] = (ceilingSens.Count(s => s.detected) / (float) ceilingSens.Count() > percentConsideredFinished);
 
         return progressByDirection;
     }

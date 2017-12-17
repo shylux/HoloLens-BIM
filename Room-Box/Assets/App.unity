@@ -323,7 +323,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   progressStrategy: 1
-  percentConsideredFinished: 0.1
+  percentConsideredFinished: 0.9
   timeBetweenHints: 5
 --- !u!1001 &882677748
 Prefab:

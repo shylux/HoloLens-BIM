@@ -88,7 +88,7 @@ public class RoomIdentifier : Singleton<RoomIdentifier> {
         // rotate
         Vector3[] corners = physicalRoom.RoomCorners();
         Vector3 rotation = ((corners[1] - corners[0]) + (corners[2] - corners[3]));
-        floorPlan.Rotate(Quaternion.FromToRotation(Vector3.forward, rotation).eulerAngles);
+        floorPlan.Rotate(Quaternion.FromToRotation(Vector3.left, rotation).eulerAngles);
 
         floorPlan.position -= vr.Tansform.position;
         floorPlan.position += physicalRoom.Anchor;

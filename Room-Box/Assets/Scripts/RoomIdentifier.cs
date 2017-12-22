@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using UnityEngine;
 using HoloToolkit.Unity;
+using System.Linq;
 
 public class RoomIdentifier : Singleton<RoomIdentifier> {
 
@@ -30,18 +31,13 @@ public class RoomIdentifier : Singleton<RoomIdentifier> {
 
     void Start () {
         analyzer = MeshAnalyzer.Instance;
-        VirtualRoomBehavior[] vRoomBhvrs = FindObjectsOfType<VirtualRoomBehavior>();
-        foreach (VirtualRoomBehavior v in vRoomBhvrs) {
-            virtualRooms.Add(v.room);
-        }
-
-        GenerateFootprints();
 	}
 	
 	void Update () {
         if (this.state == State.Inactive && analyzer.state == MeshAnalyzer.State.Finished) {
             this.state = State.InProgress;
-            IdentifyRoom();
+            VirtualRoom vr = IdentifyRoom();
+            AlignVirtualAndPhysicalSpace(vr);
         }
 
         if (showVirtualProbes) {
@@ -61,11 +57,42 @@ public class RoomIdentifier : Singleton<RoomIdentifier> {
         }
     }
 
-    void IdentifyRoom() {
+    VirtualRoom IdentifyRoom() {
+        VirtualRoomBehavior[] vRoomBhvrs = FindObjectsOfType<VirtualRoomBehavior>();
+        foreach (VirtualRoomBehavior v in vRoomBhvrs) {
+            virtualRooms.Add(v.room);
+        }
+
+        GenerateFootprints();
+
         physicalRoom = new PhysicalRoom(MeshAnalyzer.Instance.roomDimensions, MeshAnalyzer.Instance.roomCorners);
         physicalRoom.GenerateFootprint();
 
-        //MiniMap.Instance.Activate();
+        // compare footprints
+        List<KeyValuePair<VirtualRoom, float>> roomDiffList = new List<KeyValuePair<VirtualRoom, float>>();
+        foreach (VirtualRoom vr in virtualRooms) {
+            roomDiffList.Add(new KeyValuePair<VirtualRoom, float>(
+                vr,
+                physicalRoom.CalculateDifference(vr)));
+        }
+        roomDiffList.Sort((pair1, pair2) => pair1.Value.CompareTo(pair2.Value));
+
+        return roomDiffList[0].Key;
+    }
+
+    void AlignVirtualAndPhysicalSpace(VirtualRoom vr) {
+        Transform floorPlan = MiniMap.Instance.transform.Find("FloorPlan");
+
+        // rotate
+        Vector3[] corners = physicalRoom.RoomCorners();
+        Vector3 rotation = ((corners[1] - corners[0]) + (corners[2] - corners[3]));
+        floorPlan.Rotate(Quaternion.FromToRotation(Vector3.left, rotation).eulerAngles);
+
+        // translate
+        floorPlan.position -= vr.Tansform.position;
+        floorPlan.position += physicalRoom.Anchor;
+
+        MiniMap.Instance.Activate();
     }
 }
 
@@ -80,7 +107,7 @@ public abstract class Room {
 
     // Starting at a bottom corner where, looking from the inside, the bigger wall is on the right and the smaller on the left.
     // Second corner is the one along the bigger wall. Rotate clockwise, then to the same with the top corners.
-    protected abstract Vector3[] RoomCorners();
+    public abstract Vector3[] RoomCorners();
 
     protected Vector3 roomCenter = Vector3.zero;
 
@@ -145,6 +172,20 @@ public abstract class Room {
             Debug.DrawLine(ray.origin, ray.origin + ray.direction * RoomIdentifier.Instance.probeDepth, (probes[ray]) ? Color.green : Color.red, 0.1f, true);
         }
     }
+
+    public bool[] Footprint {
+        get { return this.footprint; }
+    }
+    public bool[] FootprintRotated {
+        get {
+            bool[] rot = new bool[4 * RoomIdentifier.Instance.sensitivity];
+            // copy second half of footprint to first half of rot, etc.
+            // this has the effect that the starting corner is now opposite of othe one in footprint
+            System.Array.Copy(footprint, 2 * RoomIdentifier.Instance.sensitivity, rot, 0, 2 * RoomIdentifier.Instance.sensitivity);
+            System.Array.Copy(footprint, 0, rot, 2 * RoomIdentifier.Instance.sensitivity, 2 * RoomIdentifier.Instance.sensitivity);
+            return rot;
+        }
+    }
 }
 
 
@@ -162,40 +203,48 @@ public class PhysicalRoom : Room {
         return Physics.Raycast(r, out hit, RoomIdentifier.Instance.probeDepth, LayerMask.GetMask("SpatialMesh"));
     }
 
-    protected override Vector3[] RoomCorners() {
-        // the corners from the analyzer script follow the big wall from the first to the second corner.
-        // but we don't know if it is clock or counter-clock wise.
-
-        Vector3 normal = Vector3.Cross(corners[1] - corners[0], corners[3] - corners[0]);
-
-        if (normal.y < 0) {
-            // the corners are counter-clock wise. switch them around.
-
-            // bottom
-            Vector3 tmp;
-            tmp = corners[1];
-            corners[1] = corners[3];
-            corners[3] = tmp;
-            
-            // top
-            tmp = corners[5];
-            corners[5] = corners[7];
-            corners[7] = tmp;
-
-            // since we changed the order the first step is now along the smaller wall.
-            // rotate by 1 to start with a big wall.
-
-            // bottom
-            tmp = corners[3];
-            System.Array.Copy(corners, 0, corners, 1, 3);
-            corners[0] = tmp;
-
-            // top
-            tmp = corners[7];
-            System.Array.Copy(corners, 4, corners, 5, 3);
-            corners[4] = tmp;
-        }
-        
+    public override Vector3[] RoomCorners() {
         return corners;
+    }
+
+    /* This method checks how good the virtual room matches the physical one.
+     * It checks the room twice. The second time 180deg rotated to find out the orientation.  
+     * */
+    public float CalculateDifference(VirtualRoom virtualRoom) {
+        // check room dimensions first
+        float diff = (this.dimensions - virtualRoom.dimensions).magnitude;
+
+        if (diff > 0.5f) return float.MaxValue;
+
+        // check the footprint
+        float diffNormal = WallDifference(this.Footprint, virtualRoom.Footprint);
+        float diffRotated = WallDifference(this.Footprint, virtualRoom.FootprintRotated);
+        if (diffRotated < diffNormal)
+            virtualRoom.betterRotated = true;
+
+        float bestFootprintDiff = Mathf.Min(diffNormal, diffRotated);
+
+        return bestFootprintDiff;
+    }
+
+    private float WallDifference(bool[] pRoom, bool[] vRoom) {
+        float diffScore = 0;
+
+        for (int i = 0; i < pRoom.Length; i++) {
+            if (!pRoom[i] && vRoom[i])
+                diffScore += 0.2f;
+
+            if (pRoom[i] && !vRoom[i])
+                diffScore += 1;
+        }
+
+        // make invariant to sensitivity
+        diffScore /= pRoom.Length;
+
+        return diffScore;
+    }
+
+    public Vector3 Anchor {
+        get { return corners[0]; }
     }
 }

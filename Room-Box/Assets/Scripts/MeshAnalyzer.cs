@@ -78,6 +78,7 @@ public class MeshAnalyzer : Singleton<MeshAnalyzer>
     {
         Debug.Log("Start mesh analysis");
 
+        // iterate over all mesh filters provided by the ScanManager and categorize the vertices.
         List<MeshFilter> filters = ScanManager.Instance.GetMeshFilters();
         for (int index = 0; index < filters.Count; index++)
         {
@@ -92,17 +93,6 @@ public class MeshAnalyzer : Singleton<MeshAnalyzer>
                 int[] triangles = mesh.triangles;
                 Vector3[] vertices = mesh.vertices;
                 Vector3[] normals = mesh.normals;
-
-                for (int i = 0; i < triangles.Length; i += 3)
-                {
-                    Vector3 v0 = filter.transform.TransformPoint(vertices[triangles[i]]);
-                    Vector3 v1 = filter.transform.TransformPoint(vertices[triangles[i + 1]]);
-                    Vector3 v2 = filter.transform.TransformPoint(vertices[triangles[i + 2]]);
-                    Vector3 center = (v0 + v1 + v2) / 3;
-                    Vector3 dir = Vector3.Normalize(Vector3.Cross(v1 - v0, v2 - v0));
-                }
-
-                yield return null;
 
                 for (int i = 0; i < vertices.Length; i++)
                 {
@@ -120,12 +110,12 @@ public class MeshAnalyzer : Singleton<MeshAnalyzer>
         yield return null;
 
         foundWalls = FindWallsFromNormals(horizontalNormals);
+
         yield return null;
+
         FindFloorAndCeiling(upNormals, downNormals);
 
         CalculateRoomDimensions();
-
-        yield return null;
 
         state = State.Finished;
     }
@@ -259,17 +249,64 @@ public class MeshAnalyzer : Singleton<MeshAnalyzer>
         Plane floorPlane = new Plane(new Vector3(0, minFloor, 0), Vector3.up);
         Plane ceilingPlane = new Plane(new Vector3(0, maxCeiling, 0), Vector3.down);
 
-        // calculate all corner points of the room
+        
+        /** calculate all corner points of the room **/
+
+        Plane bigWall1, bigWall2, smallWall1, smallWall2;
+        // the bigger walls are the ones with the smaller distance between them 
+        if (mainDist < secDist) {
+            bigWall1 = mainWall;
+            bigWall2 = mainOppositeWall;
+            smallWall1 = secWall;
+            smallWall2 = secOppositeWall;
+        } else {
+            bigWall1 = secWall;
+            bigWall2 = secOppositeWall;
+            smallWall1 = mainWall;
+            smallWall2 = mainOppositeWall;
+        }
+
         roomCorners = new Vector3[8];
         
-        roomCorners[0] = Intersection(mainWall, secWall, floorPlane);
-        roomCorners[1] = Intersection(mainWall, secOppositeWall, floorPlane);
-        roomCorners[2] = Intersection(mainOppositeWall, secOppositeWall, floorPlane);
-        roomCorners[3] = Intersection(mainOppositeWall, secWall, floorPlane);
-        roomCorners[4] = Intersection(mainWall, secWall, ceilingPlane);
-        roomCorners[5] = Intersection(mainWall, secOppositeWall, ceilingPlane);
-        roomCorners[6] = Intersection(mainOppositeWall, secOppositeWall, ceilingPlane);
-        roomCorners[7] = Intersection(mainOppositeWall, secWall, ceilingPlane);
+        roomCorners[0] = Intersection(bigWall1, smallWall1, floorPlane);
+        roomCorners[1] = Intersection(bigWall1, smallWall2, floorPlane);
+        roomCorners[2] = Intersection(bigWall2, smallWall2, floorPlane);
+        roomCorners[3] = Intersection(bigWall2, smallWall1, floorPlane);
+        roomCorners[4] = Intersection(bigWall1, smallWall1, ceilingPlane);
+        roomCorners[5] = Intersection(bigWall1, smallWall2, ceilingPlane);
+        roomCorners[6] = Intersection(bigWall2, smallWall2, ceilingPlane);
+        roomCorners[7] = Intersection(bigWall2, smallWall1, ceilingPlane);
+
+        // but we don't know if it is clock or counter-clock wise.
+        Vector3 normal = Vector3.Cross(roomCorners[1] - roomCorners[0], roomCorners[3] - roomCorners[0]);
+
+        if (normal.y < 0) {
+            // the corners are counter-clock wise. switch them around.
+
+            // bottom
+            Vector3 tmp;
+            tmp = roomCorners[1];
+            roomCorners[1] = roomCorners[3];
+            roomCorners[3] = tmp;
+
+            // top
+            tmp = roomCorners[5];
+            roomCorners[5] = roomCorners[7];
+            roomCorners[7] = tmp;
+
+            // since we changed the order the first step is now along the smaller wall.
+            // rotate by 1 to start with a big wall.
+
+            // bottom
+            tmp = roomCorners[3];
+            System.Array.Copy(roomCorners, 0, roomCorners, 1, 3);
+            roomCorners[0] = tmp;
+
+            // top
+            tmp = roomCorners[7];
+            System.Array.Copy(roomCorners, 4, roomCorners, 5, 3);
+            roomCorners[4] = tmp;
+        }
 
         MiniMap.Instance.addCube(roomCorners);
     }

@@ -20,6 +20,7 @@ public class VirtualRoomBehavior : MonoBehaviour {
 
 public class VirtualRoom : Room {
     VirtualRoomBehavior behavior;
+    public bool betterRotated = false;
 
     public VirtualRoom(Vector3 _dimensions, VirtualRoomBehavior _behavior) {
         this.dimensions = _dimensions;
@@ -31,7 +32,7 @@ public class VirtualRoom : Room {
         return this.behavior.meshCollider.Raycast(r, out hit, RoomIdentifier.Instance.probeDepth);
     }
 
-    protected override Vector3[] RoomCorners() {
+    public override Vector3[] RoomCorners() {
         Vector3[] corners = new Vector3[8];
 
         Vector3 origin = behavior.transform.position;
@@ -45,5 +46,9 @@ public class VirtualRoom : Room {
         corners[7] = origin + new Vector3(0, dimensions.y, dimensions.z);
 
         return corners;
+    }
+
+    public Transform Tansform {
+        get { return behavior.transform; }
     }
 }

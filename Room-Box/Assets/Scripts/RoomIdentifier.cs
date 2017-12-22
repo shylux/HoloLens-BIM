@@ -82,30 +82,15 @@ public class RoomIdentifier : Singleton<RoomIdentifier> {
 
     void AlignVirtualAndPhysicalSpace(VirtualRoom vr) {
         Transform floorPlan = MiniMap.Instance.transform.Find("FloorPlan");
-        // translate to origin
-        //floorPlan.Translate(-vr.Tansform.position);
 
         // rotate
         Vector3[] corners = physicalRoom.RoomCorners();
         Vector3 rotation = ((corners[1] - corners[0]) + (corners[2] - corners[3]));
         floorPlan.Rotate(Quaternion.FromToRotation(Vector3.left, rotation).eulerAngles);
 
+        // translate
         floorPlan.position -= vr.Tansform.position;
         floorPlan.position += physicalRoom.Anchor;
-
-        Debug.Log("Floorplan " + floorPlan.position);
-        Debug.Log("VR " + vr.Tansform.position);
-        Debug.Log("PR " + physicalRoom.Anchor);
-        //translate
-        //floorPlan.Translate(-vr.Tansform.position);
-
-        // translate to physical position
-        //floorPlan.Translate(physicalRoom.Anchor);
-
-        //Vector3 translation = physicalRoom.Anchor - vr.Tansform.position;
-        //floorPlan.transform.position = translation;
-
-
 
         MiniMap.Instance.Activate();
     }
@@ -223,7 +208,7 @@ public class PhysicalRoom : Room {
     }
 
     /* This method checks how good the virtual room matches the physical one.
-     * It checks the room twise. The second time 180deg rotated to find out the orientation.  
+     * It checks the room twice. The second time 180deg rotated to find out the orientation.  
      * */
     public float CalculateDifference(VirtualRoom virtualRoom) {
         // check room dimensions first
@@ -238,7 +223,6 @@ public class PhysicalRoom : Room {
             virtualRoom.betterRotated = true;
 
         float bestFootprintDiff = Mathf.Min(diffNormal, diffRotated);
-
 
         return bestFootprintDiff;
     }

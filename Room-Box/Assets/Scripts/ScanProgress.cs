@@ -40,9 +40,9 @@ public class ScanProgress: Singleton<ScanProgress> {
     public Strategy progressStrategy = Strategy.Continuous;
 
     [Range(0.0f, 1.0f)]
-    public float percentConsideredFinished = 0.5f;
+    public float percentConsideredFinished = 0.9f;
 
-    public float timeBetweenHints = 5f;
+    public float timeBetweenHints = 7f;
 
     // sensors in each direction
     // first order is longitude, second latitude

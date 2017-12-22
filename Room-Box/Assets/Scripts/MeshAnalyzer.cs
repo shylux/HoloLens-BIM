@@ -78,6 +78,7 @@ public class MeshAnalyzer : Singleton<MeshAnalyzer>
     {
         Debug.Log("Start mesh analysis");
 
+        // iterate over all mesh filters provided by the ScanManager and categorize the vertices.
         List<MeshFilter> filters = ScanManager.Instance.GetMeshFilters();
         for (int index = 0; index < filters.Count; index++)
         {
@@ -92,17 +93,6 @@ public class MeshAnalyzer : Singleton<MeshAnalyzer>
                 int[] triangles = mesh.triangles;
                 Vector3[] vertices = mesh.vertices;
                 Vector3[] normals = mesh.normals;
-
-                for (int i = 0; i < triangles.Length; i += 3)
-                {
-                    Vector3 v0 = filter.transform.TransformPoint(vertices[triangles[i]]);
-                    Vector3 v1 = filter.transform.TransformPoint(vertices[triangles[i + 1]]);
-                    Vector3 v2 = filter.transform.TransformPoint(vertices[triangles[i + 2]]);
-                    Vector3 center = (v0 + v1 + v2) / 3;
-                    Vector3 dir = Vector3.Normalize(Vector3.Cross(v1 - v0, v2 - v0));
-                }
-
-                yield return null;
 
                 for (int i = 0; i < vertices.Length; i++)
                 {
@@ -120,12 +110,12 @@ public class MeshAnalyzer : Singleton<MeshAnalyzer>
         yield return null;
 
         foundWalls = FindWallsFromNormals(horizontalNormals);
+
         yield return null;
+
         FindFloorAndCeiling(upNormals, downNormals);
 
         CalculateRoomDimensions();
-
-        yield return null;
 
         state = State.Finished;
     }

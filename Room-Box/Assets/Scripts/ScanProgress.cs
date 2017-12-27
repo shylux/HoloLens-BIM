@@ -40,9 +40,9 @@ public class ScanProgress: Singleton<ScanProgress> {
     public Strategy progressStrategy = Strategy.Continuous;
 
     [Range(0.0f, 1.0f)]
-    public float percentConsideredFinished = 0.5f;
+    public float percentConsideredFinished = 0.9f;
 
-    public float timeBetweenHints = 5f;
+    public float timeBetweenHints = 7f;
 
     // sensors in each direction
     // first order is longitude, second latitude
@@ -93,7 +93,7 @@ public class ScanProgress: Singleton<ScanProgress> {
                 sensor.detected = false;
 
             // do raycast, but only if the sensor didn't already detect
-            if (!sensor.detected && Physics.Raycast(transform.position, sensor.direction, LayerMask.GetMask("SpatialMesh")))
+            if (!sensor.detected && Physics.Raycast(transform.position, sensor.direction, Mathf.Infinity, LayerMask.GetMask("SpatialMesh")))
                 sensor.detected = true;
 
             // draw debug rays
@@ -129,20 +129,20 @@ public class ScanProgress: Singleton<ScanProgress> {
                        where s.lat > -30 && s.lat < 30 && mod(s.lng, 360) >= i*45 && mod(s.lng, 360) < (i+1)*45
                        select s;
 
-            progressByDirection[i] = (wallSens.Count(s => s.detected) / wallSens.Count() > percentConsideredFinished);
+            progressByDirection[i] = (wallSens.Count(s => s.detected) / (float) wallSens.Count() > percentConsideredFinished);
         }
 
         // check floor
         var floorSens = from Sensor s in sensors
-                        where s.lat <= -30
+                        where s.lat >= 30
                         select s;
-        progressByDirection[8] = (floorSens.Count(s => s.detected) / floorSens.Count() > percentConsideredFinished);
+        progressByDirection[8] = (floorSens.Count(s => s.detected) / (float) floorSens.Count() > percentConsideredFinished);
 
         // check ceiling
         var ceilingSens = from Sensor s in sensors
-                        where s.lat >= 30
+                        where s.lat <= -30
                         select s;
-        progressByDirection[9] = (ceilingSens.Count(s => s.detected) / ceilingSens.Count() > percentConsideredFinished);
+        progressByDirection[9] = (ceilingSens.Count(s => s.detected) / (float) ceilingSens.Count() > percentConsideredFinished);
 
         return progressByDirection;
     }

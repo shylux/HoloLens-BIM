@@ -2,9 +2,6 @@
 using System;
 using System.Collections;
 using System.Collections.Generic;
-#if UNITY_EDITOR
-using UnityEditor;
-#endif
 using UnityEngine;
 using UnityEngine.Rendering;
 using UnityEngine.VR.WSA;
@@ -18,13 +15,17 @@ public enum BakedState {
 public class SurfaceEntry {
     public int id; // ID used by the HoloLens
     public GameObject gameObject; // holds mesh, anchor and renderer
+    public Bounds aabb; // bounding box
     public float lastUpdateTime;
+    public float lastLookedAtTime;
     public BakedState bakedState;
 
-    public SurfaceEntry(int surfaceId, bool rendering = false, Material mat = null) {
+    public SurfaceEntry(int surfaceId, Bounds bounds, bool rendering = false, Material mat = null) {
         this.id = surfaceId;
+        this.aabb = bounds;
         this.bakedState = BakedState.NeverBaked;
         this.lastUpdateTime = Time.realtimeSinceStartup;
+        this.lastLookedAtTime = Time.realtimeSinceStartup;
         this.gameObject = new GameObject(String.Format("Surface-{0}", surfaceId));
         this.gameObject.AddComponent<MeshFilter>();
         this.gameObject.AddComponent<WorldAnchor>();
@@ -37,6 +38,15 @@ public class SurfaceEntry {
             meshRenderer.receiveShadows = false;
             meshRenderer.sharedMaterial = new Material(mat);
             meshRenderer.sharedMaterial.SetColor("_WireColor", Color.red);
+        }
+    }
+
+    public class SurfaceEntryComparer : IComparer<SurfaceEntry> {
+        public int Compare(SurfaceEntry x, SurfaceEntry y) {
+            if (x.bakedState != y.bakedState) {
+                return (x.bakedState < y.bakedState) ? -1 : 1;
+            }
+            return (x.lastLookedAtTime > y.lastLookedAtTime) ? -1 : 1;
         }
     }
 }
@@ -52,10 +62,9 @@ public class ScanManager : Singleton<ScanManager> {
 
     // Baking queue
     //TODO: Maybe implement as priority queue. Depends on whether we have enough data to queue.
-    Queue<SurfaceEntry> bakingQueue = new Queue<SurfaceEntry>();
+    LazyPriorityQueue<SurfaceEntry> bakingQueue = new LazyPriorityQueue<SurfaceEntry>(new SurfaceEntry.SurfaceEntryComparer());
     bool isBaking = false;
     public int numberOfBakedSurfaces = 0;
-
     public event EventHandler OnMeshUpdate;
 
     // Rendering
@@ -77,14 +86,24 @@ public class ScanManager : Singleton<ScanManager> {
 
     // Update is called once per frame
     void Update() {
+        // request update from observer
         if (lastUpdateTime + updateFrequencyInSeconds < Time.realtimeSinceStartup) {
             lastUpdateTime = Time.realtimeSinceStartup;
 
             observer.Update(onSurfaceChanged);
         }
 
+        // update priorities to bake the mesh the user is looking at
+        Ray gazeRay = new Ray(Camera.main.transform.position, Camera.main.transform.forward);
+        foreach (SurfaceEntry entry in bakingQueue) {
+            if (entry.aabb.IntersectRay(gazeRay)) {
+                entry.lastLookedAtTime = Time.realtimeSinceStartup;
+            }
+        }
+
+        // bake the mesh
         if (!isBaking && bakingQueue.Count > 0) {
-            SurfaceEntry surfaceEntry = bakingQueue.Dequeue();
+            SurfaceEntry surfaceEntry = bakingQueue.Pop();
             SurfaceData request = new SurfaceData();
             request.id.handle = surfaceEntry.id;
             request.outputMesh = surfaceEntry.gameObject.GetComponent<MeshFilter>();
@@ -115,7 +134,7 @@ public class ScanManager : Singleton<ScanManager> {
 
     void onSurfaceChanged(SurfaceId id, SurfaceChange changeType, Bounds bounds, DateTime updateTime) {
         if (changeType == SurfaceChange.Added) {
-            SurfaceEntry newEntry = new SurfaceEntry(id.handle, renderMeshes, meshMaterial);
+            SurfaceEntry newEntry = new SurfaceEntry(id.handle, bounds, renderMeshes, meshMaterial);
             newEntry.gameObject.transform.parent = gameObject.transform;
 
             surfaces.Add(id.handle, newEntry);
@@ -126,7 +145,7 @@ public class ScanManager : Singleton<ScanManager> {
             // queue for baking
             SurfaceEntry surface;
             if (surfaces.TryGetValue(id.handle, out surface)) {
-                bakingQueue.Enqueue(surface);
+                bakingQueue.Add(surface);
             }
         }
 

@@ -10,12 +10,19 @@ public class ScanProgress: Singleton<ScanProgress> {
     protected class Sensor {
         public Vector3 direction;
         public float lng, lat;
-        public bool detected = false;
+        private bool _detected = false;
+        public bool detected {
+            get { return this._detected; }
+            set { this._detected = value; this.fog.SetActive(!value); }
+        }
+        public GameObject fog;
 
-        public Sensor(Vector3 direction, float lng, float lat) {
+        public Sensor(Vector3 direction, float lng, float lat, ScanProgress parent) {
             this.direction = direction;
             this.lng = lng;
             this.lat = lat;
+            this.fog = Instantiate(parent.fog, new Vector3(direction.normalized.x, direction.normalized.y, direction.normalized.z), Quaternion.LookRotation(-direction) * Quaternion.Euler(90, 0, 0));
+            this.fog.transform.parent = parent.fogAnchor.transform;
         }
     }
 
@@ -54,11 +61,16 @@ public class ScanProgress: Singleton<ScanProgress> {
     // Speech output
     TextToSpeech tts;
 
+    public GameObject fog;
+    public GameObject fogAnchor;
+
     void Start() {
         tts = GetComponentInChildren<TextToSpeech>();
         tts.StartSpeaking("Starting scanning process.");
 
         lastHintTime = Time.realtimeSinceStartup;
+
+        fogAnchor.transform.position = transform.position;
 
         sensors = new Sensor[360 / frequency, 180 / frequency];
         
@@ -67,7 +79,7 @@ public class ScanProgress: Singleton<ScanProgress> {
                 float lng = getLongitude(ilng);
                 float lat = getLatitude(ilat);
                 Vector3 dir = createDirectionVector(lat, lng);
-                sensors[ilng, ilat] = new Sensor(dir, lng, lat);
+                sensors[ilng, ilat] = new Sensor(dir, lng, lat, this);
             }
         }        
     }
@@ -87,14 +99,18 @@ public class ScanProgress: Singleton<ScanProgress> {
         // disable when finished
         if (state == State.Finished) return;
 
+        // update fog position so it moves with the camera
+        fogAnchor.transform.position = transform.position;
+
         // check each sensor
         foreach (Sensor sensor in sensors) {
             if (progressStrategy == Strategy.SingleFrame) // reset the detection state on singleframe strategy
                 sensor.detected = false;
 
             // do raycast, but only if the sensor didn't already detect
-            if (!sensor.detected && Physics.Raycast(transform.position, sensor.direction, Mathf.Infinity, LayerMask.GetMask("SpatialMesh")))
+            if (!sensor.detected && Physics.Raycast(transform.position, sensor.direction, Mathf.Infinity, LayerMask.GetMask("SpatialMesh"))) {
                 sensor.detected = true;
+            }
 
             // draw debug rays
             Color sensorColor = (sensor.detected) ? Color.green : Color.red;

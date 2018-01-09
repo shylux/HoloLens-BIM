@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using UnityEngine;
 using HoloToolkit.Unity;
 using System.Linq;
+using System;
 
 public class RoomIdentifier : Singleton<RoomIdentifier> {
 
@@ -76,6 +77,11 @@ public class RoomIdentifier : Singleton<RoomIdentifier> {
                 physicalRoom.CalculateDifference(vr)));
         }
         roomDiffList.Sort((pair1, pair2) => pair1.Value.CompareTo(pair2.Value));
+
+        if (roomDiffList[0].Value == float.MaxValue) {
+            ScanProgress.Instance.tts.StartSpeaking("Error. Room not identified.");
+            throw new Exception("Could not identify room.");
+        }
 
         return roomDiffList[0].Key;
     }

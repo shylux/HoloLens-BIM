@@ -183,4 +183,10 @@ public class ScanManager : Singleton<ScanManager> {
 
         return renderers;
     }
+
+    public void hideSurfaceMesh() {
+        foreach (SurfaceEntry surfaceEntry in surfaces.Values) {
+            surfaceEntry.gameObject.GetComponent<MeshRenderer>().enabled = false;
+        }
+    }
 }

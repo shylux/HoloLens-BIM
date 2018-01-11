@@ -39,6 +39,7 @@ public class RoomIdentifier : Singleton<RoomIdentifier> {
             this.state = State.InProgress;
             VirtualRoom vr = IdentifyRoom();
             AlignVirtualAndPhysicalSpace(vr);
+            ScanManager.Instance.hideSurfaceMesh();
         }
 
         if (showVirtualProbes) {

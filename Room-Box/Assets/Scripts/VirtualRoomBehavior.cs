@@ -10,6 +10,8 @@ public class VirtualRoomBehavior : MonoBehaviour {
 
     public VirtualRoom room;
 
+    public string identifyMessage = "";
+
     public void Start() {
         room = new VirtualRoom(dimensions, this);
     }
@@ -66,5 +68,9 @@ public class VirtualRoom : Room {
 
     public Transform Transform {
         get { return behavior.transform; }
+    }
+
+    public string IdentifyMessage {
+        get { return behavior.identifyMessage; }
     }
 }

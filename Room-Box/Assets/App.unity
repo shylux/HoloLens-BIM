@@ -38,7 +38,7 @@ RenderSettings:
   m_ReflectionIntensity: 1
   m_CustomReflection: {fileID: 0}
   m_Sun: {fileID: 0}
-  m_IndirectSpecularColor: {r: 0.37311918, g: 0.3807398, b: 0.35872716, a: 1}
+  m_IndirectSpecularColor: {r: 0.37311992, g: 0.38074034, b: 0.35872713, a: 1}
 --- !u!157 &3
 LightmapSettings:
   m_ObjectHideFlags: 0
@@ -270,10 +270,19 @@ Prefab:
     m_RemovedComponents: []
   m_ParentPrefab: {fileID: 100100000, guid: 92e8623dc1befcd44948913e75138be9, type: 3}
   m_IsPrefabParent: 0
---- !u!4 &461312899 stripped
+--- !u!4 &461312899
 Transform:
+  m_ObjectHideFlags: 0
   m_PrefabParentObject: {fileID: 400000, guid: 92e8623dc1befcd44948913e75138be9, type: 3}
   m_PrefabInternal: {fileID: 461312898}
+  m_GameObject: {fileID: 1382760726}
+  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
+  m_LocalPosition: {x: 0, y: 0, z: 0}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_Children: []
+  m_Father: {fileID: 933811307}
+  m_RootOrder: 0
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
 --- !u!1 &725439263
 GameObject:
   m_ObjectHideFlags: 0
@@ -459,6 +468,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   dimensions: {x: 6.55, y: 3.5, z: 10}
+  identifyMessage: Room identified. You stand in room 102.
 --- !u!1 &759240625 stripped
 GameObject:
   m_PrefabParentObject: {fileID: 100002, guid: 424ae22a91777a64b9a2a7c4b355b5f0, type: 3}
@@ -539,6 +549,35 @@ Prefab:
     m_RemovedComponents: []
   m_ParentPrefab: {fileID: 100100000, guid: bbf0e15d42d534a42b923838df826aad, type: 2}
   m_IsPrefabParent: 0
+--- !u!1 &933811306
+GameObject:
+  m_ObjectHideFlags: 0
+  m_PrefabParentObject: {fileID: 0}
+  m_PrefabInternal: {fileID: 461312898}
+  serializedVersion: 5
+  m_Component:
+  - component: {fileID: 933811307}
+  m_Layer: 0
+  m_Name: Missing Prefab
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!4 &933811307
+Transform:
+  m_ObjectHideFlags: 0
+  m_PrefabParentObject: {fileID: 0}
+  m_PrefabInternal: {fileID: 461312898}
+  m_GameObject: {fileID: 933811306}
+  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
+  m_LocalPosition: {x: 0, y: 0, z: 0}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_Children:
+  - {fileID: 461312899}
+  m_Father: {fileID: 2120745749}
+  m_RootOrder: 5
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
 --- !u!1 &1140961367
 GameObject:
   m_ObjectHideFlags: 0
@@ -712,6 +751,21 @@ MeshFilter:
   m_PrefabInternal: {fileID: 0}
   m_GameObject: {fileID: 1189317495}
   m_Mesh: {fileID: 10206, guid: 0000000000000000e000000000000000, type: 0}
+--- !u!1 &1382760726
+GameObject:
+  m_ObjectHideFlags: 0
+  m_PrefabParentObject: {fileID: 0}
+  m_PrefabInternal: {fileID: 461312898}
+  serializedVersion: 5
+  m_Component:
+  - component: {fileID: 461312899}
+  m_Layer: 0
+  m_Name: Missing Prefab (Dummy)
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
 --- !u!1 &1453669088
 GameObject:
   m_ObjectHideFlags: 0
@@ -1004,6 +1058,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   dimensions: {x: 10, y: 3.5, z: 6.55}
+  identifyMessage: 
 --- !u!64 &1852035037
 MeshCollider:
   m_ObjectHideFlags: 0
@@ -1261,6 +1316,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   dimensions: {x: 10, y: 3.5, z: 6.55}
+  identifyMessage: 
 --- !u!64 &1979784742
 MeshCollider:
   m_ObjectHideFlags: 0
@@ -1309,7 +1365,7 @@ Transform:
   - {fileID: 2144391627}
   - {fileID: 759240622}
   - {fileID: 1189317496}
-  - {fileID: 461312899}
+  - {fileID: 933811307}
   m_Father: {fileID: 1453669089}
   m_RootOrder: 1
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
@@ -1396,6 +1452,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   dimensions: {x: 6.55, y: 3.5, z: 10}
+  identifyMessage: Room identified. You stand in room 101.
 --- !u!1 &2144391630 stripped
 GameObject:
   m_PrefabParentObject: {fileID: 100002, guid: b0d2f1b145215494b8c3cfa4b01a0742, type: 3}

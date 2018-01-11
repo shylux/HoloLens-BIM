@@ -11,27 +11,32 @@ ModelImporter:
     100006: WindowsOutside
     100008: WindowWall_big
     100010: WindowWall_small
+    100012: Room_Number
     400000: //RootNode
     400002: Room
     400004: Room_002
     400006: WindowsOutside
     400008: WindowWall_big
     400010: WindowWall_small
+    400012: Room_Number
     2300000: Room
     2300002: Room_002
     2300004: WindowsOutside
     2300006: WindowWall_big
     2300008: WindowWall_small
+    2300010: Room_Number
     3300000: Room
     3300002: Room_002
     3300004: WindowsOutside
     3300006: WindowWall_big
     3300008: WindowWall_small
+    3300010: Room_Number
     4300000: Room
     4300002: Room_002
     4300004: WindowWall_small
     4300006: WindowWall_big
     4300008: WindowsOutside
+    4300010: Room_Number
     7400000: Default Take
     9500000: //RootNode
   materials:

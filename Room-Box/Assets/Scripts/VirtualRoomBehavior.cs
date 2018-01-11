@@ -2,7 +2,7 @@
 using System.Collections.Generic;
 using UnityEngine;
 
-[RequireComponent(typeof(MeshCollider))]
+
 public class VirtualRoomBehavior : MonoBehaviour {
 
     [Tooltip("Axis aligned dimensions of the room. The x dimension is the biggest horizontal dimension (bigger than z).")]
@@ -10,10 +10,7 @@ public class VirtualRoomBehavior : MonoBehaviour {
 
     public VirtualRoom room;
 
-    public MeshCollider meshCollider;
-
     public void Start() {
-        meshCollider = GetComponent<MeshCollider>();
         room = new VirtualRoom(dimensions, this);
     }
 }
@@ -28,8 +25,10 @@ public class VirtualRoom : Room {
     }
 
     protected override bool RayCast(Ray r) {
-        RaycastHit hit = new RaycastHit();
-        return this.behavior.meshCollider.Raycast(r, out hit, RoomIdentifier.Instance.probeDepth);
+        foreach (RaycastHit hit in Physics.RaycastAll(r, RoomIdentifier.Instance.probeDepth, LayerMask.GetMask("Wall"))) {
+            if (hit.transform.IsChildOf(this.behavior.transform)) return true;
+        }
+        return false;
     }
 
     public override Vector3[] RoomCorners() {
@@ -38,17 +37,34 @@ public class VirtualRoom : Room {
         Vector3 origin = behavior.transform.position;
         corners[0] = origin;
         corners[1] = origin + new Vector3(-dimensions.x, 0, 0);
-        corners[2] = origin + new Vector3(-dimensions.x, 0, dimensions.z);
-        corners[3] = origin + new Vector3(0, 0, dimensions.z);
+        corners[2] = origin + new Vector3(-dimensions.x, 0, -dimensions.z);
+        corners[3] = origin + new Vector3(0, 0, -dimensions.z);
+
         corners[4] = origin + new Vector3(0, dimensions.y, 0);
         corners[5] = origin + new Vector3(-dimensions.x, dimensions.y, 0);
-        corners[6] = origin + new Vector3(-dimensions.x, dimensions.y, dimensions.z);
-        corners[7] = origin + new Vector3(0, dimensions.y, dimensions.z);
+        corners[6] = origin + new Vector3(-dimensions.x, dimensions.y, -dimensions.z);
+        corners[7] = origin + new Vector3(0, dimensions.y, -dimensions.z);
+
+        // make sure the first step is along the longer coordinate
+        if (dimensions.x < dimensions.z) {
+            // change order
+
+            // bottom
+            Vector3 tmp;
+            tmp = corners[1];
+            corners[1] = corners[3];
+            corners[3] = tmp;
+
+            // top
+            tmp = corners[5];
+            corners[5] = corners[7];
+            corners[7] = tmp;
+        }
 
         return corners;
     }
 
-    public Transform Tansform {
+    public Transform Transform {
         get { return behavior.transform; }
     }
 }

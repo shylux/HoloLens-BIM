@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using UnityEngine;
 using HoloToolkit.Unity;
 using System.Linq;
+using System;
 
 public class RoomIdentifier : Singleton<RoomIdentifier> {
 
@@ -77,6 +78,11 @@ public class RoomIdentifier : Singleton<RoomIdentifier> {
         }
         roomDiffList.Sort((pair1, pair2) => pair1.Value.CompareTo(pair2.Value));
 
+        if (roomDiffList[0].Value == float.MaxValue) {
+            ScanProgress.Instance.tts.StartSpeaking("Error. Room not identified.");
+            throw new Exception("Could not identify room.");
+        }
+
         return roomDiffList[0].Key;
     }
 
@@ -85,12 +91,17 @@ public class RoomIdentifier : Singleton<RoomIdentifier> {
 
         // rotate
         Vector3[] corners = physicalRoom.RoomCorners();
-        Vector3 rotation = ((corners[1] - corners[0]) + (corners[2] - corners[3]));
-        floorPlan.Rotate(Quaternion.FromToRotation(Vector3.left, rotation).eulerAngles);
+        Vector3 ph_rotation = ((corners[1] - corners[0]) + (corners[2] - corners[3]));
+        Vector3[] vcorners = vr.RoomCorners();
+        Vector3 vr_rotation = ((vcorners[1] - vcorners[0]) + (vcorners[2] - vcorners[3]));
+        floorPlan.Rotate(Quaternion.FromToRotation(vr_rotation, ph_rotation).eulerAngles);
+        if (vr.betterRotated) {
+            floorPlan.Rotate(Quaternion.AngleAxis(180, Vector3.up).eulerAngles);
+        }
 
         // translate
-        floorPlan.position -= vr.Tansform.position;
-        floorPlan.position += physicalRoom.Anchor;
+        floorPlan.position -= vr.Transform.position;
+        floorPlan.position += physicalRoom.RoomCorners()[ (!vr.betterRotated) ? 0 : 2 ];
 
         MiniMap.Instance.Activate();
     }
@@ -212,9 +223,10 @@ public class PhysicalRoom : Room {
      * */
     public float CalculateDifference(VirtualRoom virtualRoom) {
         // check room dimensions first
-        float diff = (this.dimensions - virtualRoom.dimensions).magnitude;
 
-        if (diff > 0.5f) return float.MaxValue;
+        float diff = this.dimensions.magnitude - virtualRoom.dimensions.magnitude;
+
+        if (Mathf.Abs(diff) > 0.5f) return float.MaxValue;
 
         // check the footprint
         float diffNormal = WallDifference(this.Footprint, virtualRoom.Footprint);
@@ -227,13 +239,19 @@ public class PhysicalRoom : Room {
         return bestFootprintDiff;
     }
 
+    /* This method calculates how probable it is that the two wall footprints represent the same wall.
+     * */
     private float WallDifference(bool[] pRoom, bool[] vRoom) {
         float diffScore = 0;
 
         for (int i = 0; i < pRoom.Length; i++) {
+            // a wall in the model was not captured in the physical room
+            // this can happen easily because the scan is not perfect
             if (!pRoom[i] && vRoom[i])
-                diffScore += 0.2f;
+                diffScore += 0.1f;
 
+            // there is a wall in the physical room which is not in the model
+            // this is a strong indication that the footprint does not match
             if (pRoom[i] && !vRoom[i])
                 diffScore += 1;
         }

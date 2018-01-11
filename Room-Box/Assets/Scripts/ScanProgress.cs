@@ -52,7 +52,7 @@ public class ScanProgress: Singleton<ScanProgress> {
     private int frequency = 10;
 
     // Speech output
-    TextToSpeech tts;
+    public TextToSpeech tts;
 
     void Start() {
         tts = GetComponentInChildren<TextToSpeech>();

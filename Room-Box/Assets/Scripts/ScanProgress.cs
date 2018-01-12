@@ -221,4 +221,8 @@ public class ScanProgress: Singleton<ScanProgress> {
     public int mod(float val, int basis) {
         return Mathf.FloorToInt((val + basis) % basis);
     }
+
+    public State GetState() {
+        return state;
+    }
 }

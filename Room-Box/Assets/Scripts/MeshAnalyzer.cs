@@ -308,7 +308,7 @@ public class MeshAnalyzer : Singleton<MeshAnalyzer>
             roomCorners[4] = tmp;
         }
 
-        MiniMap.Instance.addCube(roomCorners);
+        //MiniMap.Instance.addCube(roomCorners);
     }
 
     private static Vector3 Intersection(Plane a, Plane b, Plane c) {

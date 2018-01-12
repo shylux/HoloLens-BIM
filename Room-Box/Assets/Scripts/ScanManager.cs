@@ -86,6 +86,8 @@ public class ScanManager : Singleton<ScanManager> {
 
     // Update is called once per frame
     void Update() {
+        if (ScanProgress.Instance.GetState() == ScanProgress.State.Finished) return;
+
         // request update from observer
         if (lastUpdateTime + updateFrequencyInSeconds < Time.realtimeSinceStartup) {
             lastUpdateTime = Time.realtimeSinceStartup;

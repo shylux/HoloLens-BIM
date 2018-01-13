@@ -67,7 +67,7 @@ public class MiniMap : Singleton<MiniMap> {
 
     private Vector3 getGazePlacement() {
         RaycastHit hitInfo;
-        if (Physics.Raycast(Camera.main.transform.position, Camera.main.transform.forward, out hitInfo, 1.5f, SpatialMappingManager.Instance.LayerMask)) {
+        if (Physics.Raycast(Camera.main.transform.position, Camera.main.transform.forward, out hitInfo, 1.5f, LayerMask.GetMask("SpatialMesh"))) {
             return hitInfo.point;
         }
         return Camera.main.transform.position + Camera.main.transform.forward * 1.5f;

@@ -38,7 +38,7 @@ RenderSettings:
   m_ReflectionIntensity: 1
   m_CustomReflection: {fileID: 0}
   m_Sun: {fileID: 0}
-  m_IndirectSpecularColor: {r: 0.37311918, g: 0.3807398, b: 0.35872716, a: 1}
+  m_IndirectSpecularColor: {r: 0.37311992, g: 0.38074034, b: 0.35872713, a: 1}
 --- !u!157 &3
 LightmapSettings:
   m_ObjectHideFlags: 0
@@ -282,10 +282,34 @@ Prefab:
     m_RemovedComponents: []
   m_ParentPrefab: {fileID: 100100000, guid: 92e8623dc1befcd44948913e75138be9, type: 3}
   m_IsPrefabParent: 0
---- !u!4 &461312899 stripped
+--- !u!4 &461312899
 Transform:
+  m_ObjectHideFlags: 0
   m_PrefabParentObject: {fileID: 400000, guid: 92e8623dc1befcd44948913e75138be9, type: 3}
   m_PrefabInternal: {fileID: 461312898}
+  m_GameObject: {fileID: 545815582}
+  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
+  m_LocalPosition: {x: 0, y: 0, z: 0}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_Children: []
+  m_Father: {fileID: 1669929897}
+  m_RootOrder: 0
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!1 &545815582
+GameObject:
+  m_ObjectHideFlags: 0
+  m_PrefabParentObject: {fileID: 0}
+  m_PrefabInternal: {fileID: 461312898}
+  serializedVersion: 5
+  m_Component:
+  - component: {fileID: 461312899}
+  m_Layer: 0
+  m_Name: Missing Prefab (Dummy)
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
 --- !u!1 &725439263
 GameObject:
   m_ObjectHideFlags: 0
@@ -854,7 +878,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   state: 0
   lineMaterial: {fileID: 2100000, guid: 1167492c1e04de245b5b5c06fe42d34d, type: 2}
-  tableScaleFactor: 15
+  tableScaleFactor: 20
   transitionTime: 1
 --- !u!114 &1453669091
 MonoBehaviour:
@@ -1056,6 +1080,35 @@ Transform:
   m_PrefabParentObject: {fileID: 4000011656901714, guid: 3eddd1c29199313478dd3f912bfab2ab,
     type: 2}
   m_PrefabInternal: {fileID: 1636174581}
+--- !u!1 &1669929896
+GameObject:
+  m_ObjectHideFlags: 0
+  m_PrefabParentObject: {fileID: 0}
+  m_PrefabInternal: {fileID: 461312898}
+  serializedVersion: 5
+  m_Component:
+  - component: {fileID: 1669929897}
+  m_Layer: 0
+  m_Name: Missing Prefab
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!4 &1669929897
+Transform:
+  m_ObjectHideFlags: 0
+  m_PrefabParentObject: {fileID: 0}
+  m_PrefabInternal: {fileID: 461312898}
+  m_GameObject: {fileID: 1669929896}
+  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
+  m_LocalPosition: {x: 0, y: 0, z: 0}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_Children:
+  - {fileID: 461312899}
+  m_Father: {fileID: 2120745749}
+  m_RootOrder: 5
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
 --- !u!1 &1852035034
 GameObject:
   m_ObjectHideFlags: 0
@@ -1407,7 +1460,7 @@ Transform:
   - {fileID: 2144391627}
   - {fileID: 759240622}
   - {fileID: 1189317496}
-  - {fileID: 461312899}
+  - {fileID: 1669929897}
   - {fileID: 1397496541}
   m_Father: {fileID: 1453669089}
   m_RootOrder: 1

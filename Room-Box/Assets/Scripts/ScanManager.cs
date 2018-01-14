@@ -12,6 +12,11 @@ public enum BakedState {
     PendingUpdatePostBake = 2
 }
 
+public enum MeshVisible {
+    ENABLED,
+    DISABLED
+}
+
 public class SurfaceEntry {
     public int id; // ID used by the HoloLens
     public GameObject gameObject; // holds mesh, anchor and renderer
@@ -75,6 +80,8 @@ public class ScanManager : Singleton<ScanManager> {
     public Color startColor = Color.red;
     public Color endColor = Color.white;
 
+    private MeshVisible visibility = MeshVisible.ENABLED;
+
     // Use this for initialization
     void Start() {
         observer = new SurfaceObserver();
@@ -86,6 +93,12 @@ public class ScanManager : Singleton<ScanManager> {
 
     // Update is called once per frame
     void Update() {
+        if (visibility == MeshVisible.DISABLED) {
+            foreach (SurfaceEntry surfaceEntry in surfaces.Values) {
+                surfaceEntry.gameObject.GetComponent<MeshRenderer>().enabled = false;
+            }
+        }
+
         if (ScanProgress.Instance.GetState() == ScanProgress.State.Finished) return;
 
         // request update from observer
@@ -187,8 +200,6 @@ public class ScanManager : Singleton<ScanManager> {
     }
 
     public void hideSurfaceMesh() {
-        foreach (SurfaceEntry surfaceEntry in surfaces.Values) {
-            surfaceEntry.gameObject.GetComponent<MeshRenderer>().enabled = false;
-        }
+        visibility = MeshVisible.DISABLED;
     }
 }
